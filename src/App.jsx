@@ -7,7 +7,7 @@ import { Header } from './Components/Header.jsx';
 
 //Pages
 import { Inicio } from './Pages/Inicio.jsx'
-
+import { Login } from './Pages/Login.jsx'
 
 export default function App() {
 
@@ -16,6 +16,7 @@ export default function App() {
       <Header />
       <Routes >
         <Route path="/" element={<Inicio />} />
+        <Route path="/Login" element={<Login />} />
       </Routes>
     </Router>
   );

@@ -17,7 +17,7 @@ export const Hero = () => {
                     <p className="mb-5 text-2xl">
                         Accede a equipos de los laboratorios especializados para tus proyectos e investigaciones
                     </p>
-                    <button className="btn bg-primario mt-10 p-6">EXPLORAR EQUIPOS</button>
+                    <button className="btn bg-primario text-blanco shadow-none border-none mt-10 p-6">EXPLORAR EQUIPOS</button>
                 </div>
             </div>
         </div>

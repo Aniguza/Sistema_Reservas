@@ -32,7 +32,7 @@ export const Header = () => {
                 </div>
             </div>
             <div className="navbar-end ">
-                <a className="btn bg-baseRojo text-primario border-none hover:bg-[#fff]">INICIAR SESIÓN</a>
+                <a className="btn bg-baseRojo text-primario border-none hover:bg-[#fff]"> <Link to="/Login"> INICIAR SESION </Link></a>
             </div>
         </div>
     )
