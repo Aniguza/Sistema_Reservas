@@ -16,4 +16,79 @@
 :root{
   background-color: var(--color-blanco);
   color: var(--color-negro);
+  font-family: var(--font-lato);
+}
+
+.login-container {
+  @apply flex flex-col items-center justify-center min-h-screen bg-white;
+}
+
+.login-card {
+  @apply bg-white border border-gray-300 rounded-2xl shadow-2xl p-8 w-full max-w-sm;
+}
+
+.login-title {
+  color: var(--color-primario);
+  font-size: 1.4rem;
+  font-weight: 900;
+  text-align: center;
+  margin-bottom: 0.75rem;
+}
+
+.login-subtitle {
+  text-align: center;
+  color: #555;
+  font-size: 0.9rem;
+  margin-bottom: 1.5rem;
+}
+
+/* Inputs pegados */
+.login-form {
+  @apply flex flex-col space-y-0;
+}
+
+.login-input {
+  @apply w-full border border-gray-300 p-3 focus:outline-none focus:border-[var(--color-primario)];
+}
+
+.login-input.top {
+  border-bottom: none;
+  border-radius: 0.5rem 0.5rem 0 0;
+}
+
+.login-input.bottom {
+  border-radius: 0 0 0.5rem 0.5rem;
+}
+
+.login-button {
+  background-color: var(--color-primario);
+  color: var(--color-blanco);
+  font-weight: 700;
+  margin-top: 1rem;
+  padding: 0.75rem;
+  width: 100%;
+  border-radius: 0.5rem;
+  transition: background-color 0.3s ease;
+}
+
+.login-button:hover {
+  background-color: #8f0a27;
+}
+
+.login-footer {
+  margin-top: 1rem;
+  text-align: center;
+  font-size: 0.9rem;
+  color: #555;
+}
+
+.login-register-link {
+  color: var(--color-primario);
+  font-weight: 700;
+  text-decoration: none;
+  margin-left: 4px;
+}
+
+.login-register-link:hover {
+  text-decoration: underline;
 }
