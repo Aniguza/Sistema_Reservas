@@ -4,21 +4,79 @@
 
 
 /* Custom styles */
-@theme{
+@theme {
   --color-primario: #b50d30;
   --color-blanco: #ffffff;
   --color-negro: #000000;
   --color-baseRojo: #F2C6CF;
+  --color-baseGris: #f3f3f3;
 
   --font-lato: "Lato", system-ui;
 }
 
-:root{
+:root {
   background-color: var(--color-blanco);
   color: var(--color-negro);
   font-family: var(--font-lato);
 }
 
+/* Global */
+.titulos {
+  @apply text-2xl font-bold mb-4;
+}
+
+.subtitulos {
+  @apply text-xl font-semibold mb-3;
+}
+
+.parrafos {
+  @apply text-base mb-4;
+}
+
+/* Select */
+.select {
+  @apply bg-baseRojo h-8 w-min rounded-full pl-6 pr-10;
+  font-weight: 500;
+
+  option {
+    color: black;
+    border-radius: 0;
+
+  }
+
+  option:hover {
+    background-color: var(--color-primario);
+    color: white !important;
+  }
+
+  option:checked {
+    background-color: var(--color-primario);
+    color: white;
+    font-weight: bold;
+  }
+}
+
+.tabs-border {
+  & .tab {
+
+    &:is(.tab-active, [aria-selected="true"], [aria-current="true"], [aria-current="page"]):not(.tab-disabled, [disabled]),
+    &:is(input:checked),
+    &:is(label:has(:checked)) {
+      &::before {
+        color: var(--color-primario)
+      }
+
+      &::after {
+        color: var(--color-primario)
+      }
+    }
+  }
+}
+
+
+
+
+/* Login */
 .login-container {
   @apply flex flex-col items-center justify-center min-h-screen bg-white;
 }

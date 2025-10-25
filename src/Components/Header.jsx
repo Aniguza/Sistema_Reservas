@@ -24,7 +24,7 @@ export const Header = () => {
                         <li><a>Item 3</a></li>
                     </ul>
                 </div>
-                <a className="btn btn-ghost text-xl">daisyUI</a>
+                <a className="btn btn-ghost text-xl">UTP+ Lab</a>
             </div>
             <div className="navbar-center hidden lg:flex">
                 <div className="menu menu-horizontal px-1 flex gap-4">
