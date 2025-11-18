@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { FaSearch, FaChevronDown } from "react-icons/fa";
 import { IoFilterSharp } from "react-icons/io5";
@@ -6,7 +6,26 @@ import { dataEquipos, dataAulas } from '../data/dataEquipos.jsx';
 import foto from '../assets/Images/equipo.png';
 
 export const Catalogo = () => {
+    const API_BASE = "http://localhost:3000";
+    const [equipos, setEquipos] = useState([]);
+    const [aulas, setAulas] = useState([]);
+
     const navigate = useNavigate();
+
+    useEffect(() => {
+        // Obtener equipos
+        fetch(`${API_BASE}/equipos`)
+            .then(response => response.json())
+            .then(data => setEquipos(data))
+            .catch(error => console.error('Error al obtener equipos:', error));
+
+        // Obtener aulas
+        fetch(`${API_BASE}/aulas`)
+            .then(response => response.json())
+            .then(data => setAulas(data))
+            .catch(error => console.error('Error al obtener aulas:', error));
+    }, [API_BASE]);
+
 
     const handleCardClick = (item) => {
         // Navegamos incluyendo el tipo de recurso en la URL
@@ -27,54 +46,97 @@ export const Catalogo = () => {
         setBusqueda(e.target.value);
     };
 
-    // Combinar aulas y equipos en un solo array
-    const todosLosItems = [
-        ...dataAulas.map(aula => ({ ...aula, tipo: 'Aula' })),
-        ...dataEquipos.map(equipo => ({ ...equipo, tipo: 'Equipo' }))
+    // Combinar aulas y equipos en un solo array, incluyendo equipos de aulas
+    const todosLosRecursos = [
+        ...aulas.map(aula => ({ ...aula, tipo: 'Aula' })),
+        ...equipos.map(equipo => ({ ...equipo, tipo: 'Equipo' })),
+        // Agregar equipos que están dentro de aulas (populados)
+        ...aulas.flatMap(aula => 
+            Array.isArray(aula.equipos) 
+                ? aula.equipos
+                    .filter(equipo => equipo && typeof equipo === 'object' && equipo._id)
+                    .map(equipo => ({ 
+                        ...equipo, 
+                        tipo: 'Equipo',
+                        aulaAsociada: aula.codigo // Agregar referencia al aula
+                    }))
+                : []
+        )
     ];
 
-    // Filtrar items en tiempo real basado en la búsqueda y tipo
-    const itemsFiltrados = todosLosItems.filter(item => {
+    // Eliminar duplicados de equipos (por si un equipo está en la lista general y en un aula)
+    const recursosUnicos = todosLosRecursos.reduce((acc, recurso) => {
+        const existe = acc.find(r => r._id === recurso._id);
+        if (!existe) {
+            acc.push(recurso);
+        } else if (recurso.aulaAsociada && !existe.aulaAsociada) {
+            // Si el recurso tiene aula asociada y el existente no, actualizar
+            existe.aulaAsociada = recurso.aulaAsociada;
+        }
+        return acc;
+    }, []);
+
+    // Filtrar recursos en tiempo real basado en la búsqueda y filtros
+    const recursosFiltrados = recursosUnicos.filter(recurso => {
         // Filtro por tipo
-        if (filtroTipo !== 'Todos' && item.tipo !== filtroTipo) {
+        if (filtroTipo !== 'Todos' && recurso.tipo !== filtroTipo) {
             return false;
         }
 
-        // Filtro por categoría
-        if (filtroCategoria !== 'Todos' && item.categoria !== filtroCategoria) {
+        // Filtro por categoría (solo aplicar a equipos cuando hay un filtro seleccionado)
+        if (filtroCategoria !== 'Todos') {
+            if (recurso.tipo === 'Equipo' && recurso.category !== filtroCategoria.toLowerCase()) {
+                return false;
+            }
+            // Si es un aula y hay filtro de categoría, no mostrarla
+            if (recurso.tipo === 'Aula') {
+                return false;
+            }
+        }
+
+        // Filtro por disponibilidad (solo aplicar a equipos cuando hay un filtro seleccionado)
+        if (filtroDisponibilidad !== 'Todos') {
+            if (recurso.tipo === 'Equipo') {
+                const estaDisponible = filtroDisponibilidad === 'Disponible';
+                if (recurso.disponibilidad !== estaDisponible) {
+                    return false;
+                }
+            }
+            // Si es un aula y hay filtro de disponibilidad, no mostrarla
+            if (recurso.tipo === 'Aula') {
+                return false;
+            }
+        }
+
+        // Filtro por ubicación (mostrar aula Y sus equipos)
+        if (filtroUbicacion !== 'Todos') {
+            // Mostrar el aula si coincide con el filtro
+            if (recurso.tipo === 'Aula' && recurso.codigo === filtroUbicacion) {
+                return true;
+            }
+            // Mostrar equipos que pertenecen a esa aula
+            if (recurso.tipo === 'Equipo' && recurso.aulaAsociada === filtroUbicacion) {
+                return true;
+            }
             return false;
         }
 
-        // Filtro por disponibilidad
-        if (filtroDisponibilidad !== 'Todos' && item.disponibilidad !== (filtroDisponibilidad === 'Disponible')) {
-            return false;
-        }
-
-        // Filtro por ubicación
-        if (filtroUbicacion !== 'Todos' && item.ubicacion !== filtroUbicacion) {
-            return false;
-        }
-
-        // Si no hay búsqueda, mostrar todos (que pasen el filtro de tipo)
+        // Si no hay búsqueda, mostrar todos (que pasen los filtros)
         if (!busqueda.trim()) return true;
-        
+
         const terminoBusqueda = busqueda.toLowerCase().trim();
+
+        // Búsqueda para ambos tipos
+        const coincideNombre = recurso.name?.toLowerCase().includes(terminoBusqueda);
+        const coincideDescripcion = recurso.description?.toLowerCase().includes(terminoBusqueda);
         
-        // Búsqueda común para ambos tipos
-        const coincideNombre = item.nombre.toLowerCase().includes(terminoBusqueda);
-        const coincideDescripcion = item.descripcion.toLowerCase().includes(terminoBusqueda);
-        const coincideUbicacion = item.ubicacion.toLowerCase().includes(terminoBusqueda);
-        
-        // Búsqueda específica para equipos
-        if (item.tipo === 'Equipo' && item.especificaciones) {
-            const coincideMarca = item.especificaciones.marca.toLowerCase().includes(terminoBusqueda);
-            const coincideModelo = item.especificaciones.modelo.toLowerCase().includes(terminoBusqueda);
-            const coincideCategoria = item.categoria.toLowerCase().includes(terminoBusqueda);
-            return coincideNombre || coincideDescripcion || coincideUbicacion || coincideMarca || coincideModelo || coincideCategoria;
+        if (recurso.tipo === 'Equipo') {
+            const coincideCategoria = recurso.category?.toLowerCase().includes(terminoBusqueda);
+            return coincideNombre || coincideDescripcion || coincideCategoria;
+        } else {
+            const coincideCodigo = recurso.codigo?.toLowerCase().includes(terminoBusqueda);
+            return coincideNombre || coincideDescripcion || coincideCodigo;
         }
-        
-        // Búsqueda para aulas
-        return coincideNombre || coincideDescripcion || coincideUbicacion;
     });
 
 
@@ -88,8 +150,8 @@ export const Catalogo = () => {
             <div className='grid grid-cols-[1fr_auto] gap-3'>
                 <label className="input bg-blanco border border-negro w-full">
                     <FaSearch className="icon text-primario w-4 h-4" />
-                    <input type="search" required placeholder="Busca aulas y equipos por nombre, ubicación, marca..." className='w-full bg-white' value={busqueda} onChange={handleSearch} 
-                         />
+                    <input type="search" required placeholder="Busca aulas y equipos por nombre, ubicación, marca..." className='w-full bg-white' value={busqueda} onChange={handleSearch}
+                    />
                 </label>
                 <button className="btn text-negro bg-blanco  border border-negro shadow-none">
                     <IoFilterSharp className="icon text-primario w-4 h-4" />
@@ -97,8 +159,8 @@ export const Catalogo = () => {
                 </button>
             </div>
             <div className='flex gap-3 mt-2'>
-                <select 
-                    value={filtroTipo} 
+                <select
+                    value={filtroTipo}
                     onChange={(e) => setFiltroTipo(e.target.value)}
                     className="select"
                 >
@@ -108,9 +170,9 @@ export const Catalogo = () => {
                 </select>
                 <select value={filtroCategoria} onChange={(e) => setFiltroCategoria(e.target.value)} className="select">
                     <option value="Todos">Categoría</option>
-                    <option value="Electronico">Electrónicos</option>
-                    <option value="Herramienta">Herramientas</option>
-                    <option value="Tecnologico">Tecnológicos</option>
+                    <option value="Electronicos">Electrónicos</option>
+                    <option value="Herramientas">Herramientas</option>
+                    <option value="Tecnologicos">Tecnológicos</option>
                 </select>
                 <select value={filtroDisponibilidad} onChange={(e) => setFiltroDisponibilidad(e.target.value)} className="select ">
                     <option value="Todos">Disponibilidad</option>
@@ -131,71 +193,73 @@ export const Catalogo = () => {
             <div className="mt-4 mb-2">
                 <p className="text-sm text-gray-600">
                     {busqueda.trim() ? (
-                        <>Mostrando {itemsFiltrados.length} resultado{itemsFiltrados.length !== 1 ? 's' : ''} para "{busqueda}"</>
+                        <>Mostrando {recursosFiltrados.length} resultado{recursosFiltrados.length !== 1 ? 's' : ''} para "{busqueda}"</>
                     ) : (
-                        <>Mostrando {itemsFiltrados.length} recurso{itemsFiltrados.length !== 1 ? 's' : ''} {filtroTipo !== 'Todos' ? filtroTipo.toLowerCase() + (itemsFiltrados.length !== 1 ? 's' : '') : 'disponible' + (itemsFiltrados.length !== 1 ? 's' : '')}</>
+                        <>Mostrando {recursosFiltrados.length} recurso{recursosFiltrados.length !== 1 ? 's' : ''} disponible{recursosFiltrados.length !== 1 ? 's' : ''}</>
                     )}
                 </p>
             </div>
 
+           
+
             <div className='mt-5 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6 mb-10'>
-                {itemsFiltrados.length > 0 ? (
-                    itemsFiltrados.map((item) => (
+                {recursosFiltrados.length > 0 ? (
+                    recursosFiltrados.map((recurso, index) => (
                         <div
                             className="card bg-baseGris w-full max-w-60 shadow-sm cursor-pointer transform transition-all duration-300 hover:scale-105 hover:shadow-lg hover:bg-white border-2 border-transparent hover:border-primario group"
-                            key={`${item.tipo}-${item.id}`}
-                            onClick={() => handleCardClick(item)}
+                            key={recurso._id || index}
+                            onClick={() => handleCardClick({ ...recurso, id: recurso._id })}
                             role="button"
                             tabIndex={0}
                             onKeyDown={(e) => {
                                 if (e.key === 'Enter' || e.key === ' ') {
                                     e.preventDefault();
-                                    handleCardClick(item);
+                                    handleCardClick({ ...recurso, id: recurso._id });
                                 }
                             }}
                         >
                             <figure className="relative overflow-hidden">
                                 <img
-                                    src={item.imagen || foto}
-                                    alt={item.nombre}
+                                    src={recurso.imageUrl || foto}
+                                    alt={recurso.name}
                                     className="w-full h-48 object-cover "
                                 />
 
                                 {/* Indicador de tipo */}
                                 <div className={`absolute top-3 left-3 px-2 py-1 rounded-full text-xs font-semibold ${
-                                    item.tipo === 'Aula' 
-                                        ? 'bg-blue-500 text-white' 
-                                        : 'bg-purple-500 text-white'
+                                    recurso.tipo === 'Aula' ? 'bg-blue-500 text-white' : 'bg-purple-500 text-white'
                                 }`}>
-                                    {item.tipo}
+                                    {recurso.tipo}
                                 </div>
 
                                 {/* Indicador de disponibilidad (solo para equipos) */}
-                                {item.tipo === 'Equipo' && (
+                                {recurso.tipo === 'Equipo' && (
                                     <div className={`absolute top-3 right-3 px-2 py-1 rounded-full text-xs font-semibold ${
-                                        item.disponibilidad 
-                                            ? 'bg-green-500 text-white' 
-                                            : 'bg-red-500 text-white'
+                                        recurso.disponibilidad ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
                                     }`}>
-                                        {item.disponibilidad ? 'Disponible' : 'Ocupado'}
+                                        {recurso.disponibilidad ? 'Disponible' : 'Ocupado'}
                                     </div>
                                 )}
                             </figure>
                             <div className="card-body p-4">
                                 <h2 className="card-title text-lg group-hover:text-primario transition-colors duration-300">
-                                    {item.nombre}
+                                    {recurso.name}
                                 </h2>
                                 <p className="text-gray-600 text-sm line-clamp-2">
-                                    {item.descripcion}
+                                    {recurso.description || 'Sin descripción'}
                                 </p>
-                                
-                                {/* Información común */}
+
+                                {/* Información según tipo */}
                                 <div className="mt-2 space-y-1">
-                                    <p className="text-xs text-gray-500">
-                                        <span className="font-semibold">Ubicación:</span> {item.ubicacion}
-                                    </p>
-                                    
-                                    
+                                    {recurso.tipo === 'Equipo' ? (
+                                        <p className="text-xs text-gray-500">
+                                            <span className="font-semibold">Categoría:</span> {recurso.category || 'No especificada'}
+                                        </p>
+                                    ) : (
+                                        <p className="text-xs text-gray-500">
+                                            <span className="font-semibold">Código:</span> {recurso.codigo || 'No especificado'}
+                                        </p>
+                                    )}
                                 </div>
                                 <div className="card-actions justify-end mt-3">
                                     <button className="btn btn-sm bg-primario text-white border-none hover:bg-red-700 transition-colors duration-300">
@@ -209,23 +273,10 @@ export const Catalogo = () => {
                     <div className="col-span-full flex flex-col items-center justify-center py-12">
                         <div className="text-center">
                             <FaSearch className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-                            <h3 className="text-lg font-medium text-gray-900 mb-2">No se encontraron recursos</h3>
+                            <h3 className="text-lg font-medium text-gray-900 mb-2">No se encontraron equipos</h3>
                             <p className="text-gray-500 mb-4">
-                                {busqueda.trim() ? (
-                                    <>No hay {filtroTipo !== 'Todos' ? filtroTipo.toLowerCase() + 's' : 'recursos'} que coincidan con "{busqueda}"</>
-                                ) : (
-                                    <>No hay {filtroTipo !== 'Todos' ? filtroTipo.toLowerCase() + 's' : 'recursos'} disponibles con los filtros seleccionados</>
-                                )}
+                                No hay equipos disponibles en este momento
                             </p>
-                            <button
-                                onClick={() => {
-                                    setBusqueda('');
-                                    setFiltroTipo('Todos');
-                                }}
-                                className="btn bg-primario text-white border-none hover:bg-red-700"
-                            >
-                                Limpiar filtros
-                            </button>
                         </div>
                     </div>
                 )}

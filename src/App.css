@@ -18,6 +18,7 @@
   background-color: var(--color-blanco);
   color: var(--color-negro);
   font-family: var(--font-lato);
+  
 }
 
 /* Global */
@@ -33,6 +34,10 @@
   @apply text-base mb-4;
 }
 
+.campos{
+  @apply bg-blanco border-negro w-80 lg:w-100 mb-3;
+}
+
 /* Select */
 .select {
   @apply bg-baseRojo h-8 w-min rounded-full pl-6 pr-10;
@@ -41,7 +46,6 @@
   option {
     color: black;
     border-radius: 0;
-
   }
 
   option:hover {
@@ -78,7 +82,7 @@
 
 /* Login */
 .login-container {
-  @apply flex flex-col items-center justify-center min-h-screen bg-white;
+  @apply flex flex-col items-center justify-center bg-white;
 }
 
 .login-card {

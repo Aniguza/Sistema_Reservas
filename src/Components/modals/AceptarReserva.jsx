@@ -1,0 +1,63 @@
+import React, { forwardRef } from 'react'
+import { FaPlus } from "react-icons/fa";
+import { useNavigate } from 'react-router';
+import { useToastActions } from '../toast.jsx';
+
+export const AceptarReserva = forwardRef((props, ref) => {
+    const { showSuccess, showError } = useToastActions();
+    const navigate = useNavigate();
+
+    const handleReservar = () => {
+        // no dejar confirmar si no está el checkbox seleccionado
+        const checkbox = document.getElementById("confirm-checkbox");
+        if (!checkbox.checked) {
+            document.getElementById("confirm").classList.remove("hidden");
+            showError("Por favor acepta las condiciones antes de continuar", 4000);
+            return;
+        } else {
+            //si está seleccionado, ocultar el mensaje de confirmación
+            document.getElementById("confirm").classList.add("hidden");
+        }
+        
+        // cerrar el modal
+        ref.current.close();
+        
+        // mostrar toast de reserva exitosa 
+        showSuccess("¡Reserva realizada con éxito! 🎉", 5000);
+        
+        // Regresar a página de inicio después de un pequeño delay para que se vea el toast
+        setTimeout(() => {
+            navigate('/catalogo');
+        }, 1000);
+    };
+    return (
+        <>
+            {/* Modal para agregar códigos */}
+            <dialog ref={ref} className="modal">
+                <div className="modal-box w-11/12 max-w-lg">
+                    <h3 className="font-bold text-lg mb-4 text-center">Alerta de responsabilidad del uso de labs y equipos</h3>
+                    <form method="dialog">
+                        <button className="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button>
+                    </form>
+                    <p className="text-mb text-gray mb-6 text-center">
+                        Al reservar un equipo, el usuario asume toda responsabilidad por el uso del laboratorio y los equipos asignados.<br />
+                        Se compromete a cuidarlos y devolverlos en el mismo estado en que fueron entregados, y a mantener el orden y limpieza del espacio. <br />
+                        Cualquier daño, pérdida o mal uso será reportado y tratado según el reglamento de laboratorios.
+                    </p>
+                    <div className="modal-action flex flex-col items-center gap-4">
+                        <div>
+                            <input type="checkbox"  id="confirm-checkbox" className="checkbox checkbox-sm " />  <span className='text-gray-700 text-sm'>Acepto las condiciones y me comprometo al uso responsable</span>
+                        </div>
+                        <p className='text-orange-700 text-sm text-center hidden' id='confirm'>Por favor confirma que has leído y aceptado las condiciones antes de continuar.</p>
+                        <button type='submit' className="btn bg-primario text-white hover:bg-red-700 border-none" onClick={handleReservar}>
+                            Reservar
+                        </button>
+                        
+                    </div>
+                </div>
+            </dialog>
+        </>
+    )
+});
+
+AceptarReserva.displayName = 'AceptarReserva';
