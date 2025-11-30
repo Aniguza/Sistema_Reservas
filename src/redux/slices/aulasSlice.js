@@ -1,0 +1,70 @@
+import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import { buildUrl } from '../../config/api.config';
+
+// Async thunk para obtener todas las aulas
+export const fetchAulas = createAsyncThunk(
+    'aulas/fetchAll',
+    async (_, { rejectWithValue }) => {
+        try {
+            const response = await fetch(buildUrl('/aulas'), {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            });
+
+            if (!response.ok) {
+                throw new Error('Error al obtener las aulas');
+            }
+
+            return await response.json();
+        } catch (error) {
+            return rejectWithValue(error.message);
+        }
+    },
+    {
+        condition: (_, { getState }) => {
+            const { aulas } = getState();
+            // No ejecutar si ya está cargando o ya se cargó
+            if (aulas.isLoading || aulas.loaded) {
+                return false;
+            }
+            return true;
+        },
+    }
+);
+
+const aulasSlice = createSlice({
+    name: 'aulas',
+    initialState: {
+        items: [],
+        isLoading: false,
+        error: null,
+        loaded: false, // Flag para saber si ya se cargaron los datos
+    },
+    reducers: {
+        clearError: (state) => {
+            state.error = null;
+        },
+    },
+    extraReducers: (builder) => {
+        builder
+            .addCase(fetchAulas.pending, (state) => {
+                state.isLoading = true;
+                state.error = null;
+            })
+            .addCase(fetchAulas.fulfilled, (state, action) => {
+                state.isLoading = false;
+                state.items = action.payload;
+                state.error = null;
+                state.loaded = true; // Marcar como cargado
+            })
+            .addCase(fetchAulas.rejected, (state, action) => {
+                state.isLoading = false;
+                state.error = action.payload;
+            });
+    },
+});
+
+export const { clearError } = aulasSlice.actions;
+export default aulasSlice.reducer;

@@ -1,4 +1,5 @@
 import React from 'react'
+import { OptimizedImage } from '../../Components/OptimizedImage.jsx';
 
 export const Equipos = () => {
     // Array con los datos de los equipos
@@ -33,10 +34,10 @@ export const Equipos = () => {
                 {equipos.map((equipo) => (
                     <div key={equipo.id} className="card w-96 ">
                         <figure className="px-10 pt-10">
-                            <img
+                            <OptimizedImage
                                 src={equipo.imagen}
                                 alt={equipo.alt}
-                                className="rounded-xl" />
+                                className="rounded-xl w-full h-auto" />
                         </figure>
                         <div className="card-body items-center text-center">
                             <h2 className="card-title">{equipo.nombre}</h2>

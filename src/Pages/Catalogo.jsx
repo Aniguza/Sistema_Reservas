@@ -1,30 +1,15 @@
-import React, { useState, useEffect } from 'react'
-import { Link, useNavigate } from 'react-router'
-import { FaSearch, FaChevronDown } from "react-icons/fa";
+import React, { useState } from 'react'
+import { useNavigate } from 'react-router'
+import { FaSearch } from "react-icons/fa";
 import { IoFilterSharp } from "react-icons/io5";
-import { dataEquipos, dataAulas } from '../data/dataEquipos.jsx';
+import { OptimizedImage } from '../Components/OptimizedImage.jsx';
 import foto from '../assets/Images/equipo.png';
+import { useInitialData } from '../hooks/useInitialData';
+
 
 export const Catalogo = () => {
-    const API_BASE = "http://localhost:3000";
-    const [equipos, setEquipos] = useState([]);
-    const [aulas, setAulas] = useState([]);
-
     const navigate = useNavigate();
-
-    useEffect(() => {
-        // Obtener equipos
-        fetch(`${API_BASE}/equipos`)
-            .then(response => response.json())
-            .then(data => setEquipos(data))
-            .catch(error => console.error('Error al obtener equipos:', error));
-
-        // Obtener aulas
-        fetch(`${API_BASE}/aulas`)
-            .then(response => response.json())
-            .then(data => setAulas(data))
-            .catch(error => console.error('Error al obtener aulas:', error));
-    }, [API_BASE]);
+    const { equipos, aulas, isLoading } = useInitialData();
 
 
     const handleCardClick = (item) => {
@@ -51,12 +36,12 @@ export const Catalogo = () => {
         ...aulas.map(aula => ({ ...aula, tipo: 'Aula' })),
         ...equipos.map(equipo => ({ ...equipo, tipo: 'Equipo' })),
         // Agregar equipos que están dentro de aulas (populados)
-        ...aulas.flatMap(aula => 
-            Array.isArray(aula.equipos) 
+        ...aulas.flatMap(aula =>
+            Array.isArray(aula.equipos)
                 ? aula.equipos
                     .filter(equipo => equipo && typeof equipo === 'object' && equipo._id)
-                    .map(equipo => ({ 
-                        ...equipo, 
+                    .map(equipo => ({
+                        ...equipo,
                         tipo: 'Equipo',
                         aulaAsociada: aula.codigo // Agregar referencia al aula
                     }))
@@ -129,7 +114,7 @@ export const Catalogo = () => {
         // Búsqueda para ambos tipos
         const coincideNombre = recurso.name?.toLowerCase().includes(terminoBusqueda);
         const coincideDescripcion = recurso.description?.toLowerCase().includes(terminoBusqueda);
-        
+
         if (recurso.tipo === 'Equipo') {
             const coincideCategoria = recurso.category?.toLowerCase().includes(terminoBusqueda);
             return coincideNombre || coincideDescripcion || coincideCategoria;
@@ -200,7 +185,7 @@ export const Catalogo = () => {
                 </p>
             </div>
 
-           
+
 
             <div className='mt-5 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6 mb-10'>
                 {recursosFiltrados.length > 0 ? (
@@ -219,24 +204,22 @@ export const Catalogo = () => {
                             }}
                         >
                             <figure className="relative overflow-hidden">
-                                <img
+                                <OptimizedImage
                                     src={recurso.imageUrl || foto}
                                     alt={recurso.name}
                                     className="w-full h-48 object-cover "
                                 />
 
                                 {/* Indicador de tipo */}
-                                <div className={`absolute top-3 left-3 px-2 py-1 rounded-full text-xs font-semibold ${
-                                    recurso.tipo === 'Aula' ? 'bg-blue-500 text-white' : 'bg-purple-500 text-white'
-                                }`}>
+                                <div className={`absolute top-3 left-3 px-2 py-1 rounded-full text-xs font-semibold ${recurso.tipo === 'Aula' ? 'bg-blue-500 text-white' : 'bg-purple-500 text-white'
+                                    }`}>
                                     {recurso.tipo}
                                 </div>
 
                                 {/* Indicador de disponibilidad (solo para equipos) */}
                                 {recurso.tipo === 'Equipo' && (
-                                    <div className={`absolute top-3 right-3 px-2 py-1 rounded-full text-xs font-semibold ${
-                                        recurso.disponibilidad ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
-                                    }`}>
+                                    <div className={`absolute top-3 right-3 px-2 py-1 rounded-full text-xs font-semibold ${recurso.disponibilidad ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
+                                        }`}>
                                         {recurso.disponibilidad ? 'Disponible' : 'Ocupado'}
                                     </div>
                                 )}

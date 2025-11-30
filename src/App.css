@@ -35,7 +35,7 @@
 }
 
 .campos{
-  @apply bg-blanco border-negro w-80 lg:w-100 mb-3;
+  @apply bg-blanco border-negro w-full  mb-3;
 }
 
 /* Select */

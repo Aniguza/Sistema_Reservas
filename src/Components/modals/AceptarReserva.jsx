@@ -1,13 +1,13 @@
 import React, { forwardRef } from 'react'
 import { FaPlus } from "react-icons/fa";
 import { useNavigate } from 'react-router';
-import { useToastActions } from '../toast.jsx';
+import { useToastActions } from '../../Context/ToastContext.jsx';
 
 export const AceptarReserva = forwardRef((props, ref) => {
     const { showSuccess, showError } = useToastActions();
     const navigate = useNavigate();
 
-    const handleReservar = () => {
+    const handleReservar = async () => {
         // no dejar confirmar si no está el checkbox seleccionado
         const checkbox = document.getElementById("confirm-checkbox");
         if (!checkbox.checked) {
@@ -18,17 +18,21 @@ export const AceptarReserva = forwardRef((props, ref) => {
             //si está seleccionado, ocultar el mensaje de confirmación
             document.getElementById("confirm").classList.add("hidden");
         }
-        
-        // cerrar el modal
-        ref.current.close();
-        
-        // mostrar toast de reserva exitosa 
-        showSuccess("¡Reserva realizada con éxito! 🎉", 5000);
-        
-        // Regresar a página de inicio después de un pequeño delay para que se vea el toast
-        setTimeout(() => {
-            navigate('/catalogo');
-        }, 1000);
+
+        try {
+            if (props.onConfirm) {
+                await props.onConfirm();
+            }
+
+            // cerrar el modal
+            ref.current.close();
+
+            // La confirmación exitosa será manejada por el padre (ReservaForm)
+            // No hacemos nada aquí, el toast ya se muestra en ReservaForm
+        } catch (error) {
+            // El error ya se maneja en ReservaForm, no necesitamos hacer nada aquí
+            console.error('Error en confirmación:', error);
+        }
     };
     return (
         <>
@@ -46,13 +50,13 @@ export const AceptarReserva = forwardRef((props, ref) => {
                     </p>
                     <div className="modal-action flex flex-col items-center gap-4">
                         <div>
-                            <input type="checkbox"  id="confirm-checkbox" className="checkbox checkbox-sm " />  <span className='text-gray-700 text-sm'>Acepto las condiciones y me comprometo al uso responsable</span>
+                            <input type="checkbox" id="confirm-checkbox" className="checkbox checkbox-sm " />  <span className='text-gray-700 text-sm'>Acepto las condiciones y me comprometo al uso responsable</span>
                         </div>
                         <p className='text-orange-700 text-sm text-center hidden' id='confirm'>Por favor confirma que has leído y aceptado las condiciones antes de continuar.</p>
                         <button type='submit' className="btn bg-primario text-white hover:bg-red-700 border-none" onClick={handleReservar}>
                             Reservar
                         </button>
-                        
+
                     </div>
                 </div>
             </dialog>

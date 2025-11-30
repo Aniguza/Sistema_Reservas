@@ -1,32 +1,31 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router'
 import { Link } from 'react-router';
+import { useDispatch, useSelector } from 'react-redux';
+import { loginUser } from '../redux/slices/authSlice';
 import '../App.css'
 
 import { FaRegEye } from "react-icons/fa";
 import { FaRegEyeSlash } from "react-icons/fa";
-import { useToastActions } from '../Components/toast.jsx';
+import { useToastActions } from '../Context/ToastContext.jsx';
 
 
 export const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  
+
+  const dispatch = useDispatch();
   const navigate = useNavigate();
   const { showSuccess, showError, showInfo } = useToastActions();
+  const { isLoading, error } = useSelector(state => state.auth);
 
   const togglePasswordVisibility = () => {
     setShowPassword(!showPassword);
   };
-
-  //usuario de prueba
-  //correo: usuario@utp.edu.pe
-  //contraseña: 123456
   const handleLogin = async (event) => {
     event.preventDefault();
-    
+
     // Validación de campos vacíos
     if (!email.trim() || !password.trim()) {
       showError("Por favor completa todos los campos", 3000);
@@ -39,32 +38,27 @@ export const Login = () => {
       return;
     }
 
-    setIsLoading(true);
+    try {
+      const result = await dispatch(loginUser({ email, password, isAdmin: false })).unwrap();
 
-    // Simular delay de autenticación
-    setTimeout(() => {
-      if (email === "usuario@utp.edu.pe" && password === "123456") {
-        showSuccess("¡Inicio de sesión exitoso! Bienvenido 🎉", 4000);
-        
-        // Guardar estado de login (opcional) en localStorage pero que no permita manipulación fácil
-        Object.freeze(localStorage);
-        
-        localStorage.setItem('isLoggedIn', 'true');
-        localStorage.setItem('userEmail', email);
-        
-        // Redirigir a inicio después de un breve delay
-        setTimeout(() => {
-          navigate('/');
-        }, 1000);
-      } else {
-        showError("Credenciales inválidas. Verifica tu correo y contraseña", 4000);
-      }
-      setIsLoading(false);
-    }, 800);
+      showSuccess("¡Inicio de sesión exitoso! Bienvenido 🎉", 4000);
+
+      // Guardar estado de login adicional
+      localStorage.setItem('isLoggedIn', 'true');
+      localStorage.setItem('userEmail', email);
+
+      // Redirigir a inicio (Dashboard)
+      setTimeout(() => {
+        navigate('/');
+      }, 1000);
+
+    } catch (error) {
+      console.error("Login error:", error);
+      showError(error || "Credenciales inválidas. Verifica tu correo y contraseña", 4000);
+    }
   };
+
   return (
-
-
     <div className="login-container ">
       <fieldset className="login-card">
         <h1 className="login-title">¡BIENVENIDO A LAB RESERVE DE UTP!</h1>
@@ -72,13 +66,6 @@ export const Login = () => {
         <p className="login-subtitle">
           Inicie sesión para administrar sus reservas de equipos de laboratorio
         </p>
-
-        {/* Credenciales de prueba */}
-        <div className="bg-blue-50 border-l-4 border-blue-400 p-3 mb-4 rounded">
-          <p className="text-sm text-blue-700 font-medium">Credenciales de prueba:</p>
-          <p className="text-xs text-blue-600">📧 usuario@utp.edu.pe</p>
-          <p className="text-xs text-blue-600">🔐 123456</p>
-        </div>
 
         <form className="login-form" onSubmit={handleLogin}>
           <input
@@ -102,10 +89,10 @@ export const Login = () => {
               onChange={(e) => setPassword(e.target.value)}
               disabled={isLoading}
             />
-          
-            <button 
-              type="button" 
-              onClick={togglePasswordVisibility} 
+
+            <button
+              type="button"
+              onClick={togglePasswordVisibility}
               className="absolute right-3 top-4 cursor-pointer hover:text-primario transition-colors"
               disabled={isLoading}
             >
@@ -113,8 +100,8 @@ export const Login = () => {
             </button>
           </div>
 
-          <button 
-            type="submit" 
+          <button
+            type="submit"
             className={`login-button ${isLoading ? 'opacity-70 cursor-not-allowed' : 'hover:bg-red-700'} transition-all`}
             disabled={isLoading}
           >
