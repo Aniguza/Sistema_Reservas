@@ -85,9 +85,10 @@ export const DetalleEquipo = () => {
                     <input type="radio" name="my_tabs_2" className="tab text-negro" aria-label="Descripción" defaultChecked />
                     <div className="tab-content p-10">
                         <h3 className="subtitulos">Descripción del {tipoRecurso}</h3>
-                        <p className="parrafos">
-                            {recurso.descripcion}
-                        </p>
+                        <div 
+                            className="parrafos prose prose-lg max-w-none"
+                            dangerouslySetInnerHTML={{ __html: recurso.descripcion }}
+                        />
                         
                         {/* Información básica para ambos tipos */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">

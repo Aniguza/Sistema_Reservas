@@ -11,6 +11,15 @@ export const Catalogo = () => {
     const navigate = useNavigate();
     const { equipos, aulas, isLoading } = useInitialData();
 
+    // Función para formatear correctamente el nombre de la categoría
+    const formatearCategoria = (categoria) => {
+        const categorias = {
+            'electronicos': 'Electrónicos',
+            'herramientas': 'Herramientas',
+            'tecnologicos': 'Tecnológicos',
+        };
+        return categorias[categoria] || categoria || 'No especificada';
+    };
 
     const handleCardClick = (item) => {
         // Navegamos incluyendo el tipo de recurso en la URL
@@ -70,7 +79,11 @@ export const Catalogo = () => {
 
         // Filtro por categoría (solo aplicar a equipos cuando hay un filtro seleccionado)
         if (filtroCategoria !== 'Todos') {
-            if (recurso.tipo === 'Equipo' && recurso.category !== filtroCategoria.toLowerCase()) {
+            if (recurso.tipo === 'Equipo' && recurso.category !== filtroCategoria) {
+                //escribir correctamente, por ejemplo si es electronicos, escribir "Electrónicos"
+                if ( recurso.category !== 'electronicos') {
+                    re
+                }
                 return false;
             }
             // Si es un aula y hay filtro de categoría, no mostrarla
@@ -155,9 +168,9 @@ export const Catalogo = () => {
                 </select>
                 <select value={filtroCategoria} onChange={(e) => setFiltroCategoria(e.target.value)} className="select">
                     <option value="Todos">Categoría</option>
-                    <option value="Electronicos">Electrónicos</option>
-                    <option value="Herramientas">Herramientas</option>
-                    <option value="Tecnologicos">Tecnológicos</option>
+                    <option value="electronicos">Electrónicos</option>
+                    <option value="herramientas">Herramientas</option>
+                    <option value="tecnologicos">Tecnológicos</option>
                 </select>
                 <select value={filtroDisponibilidad} onChange={(e) => setFiltroDisponibilidad(e.target.value)} className="select ">
                     <option value="Todos">Disponibilidad</option>
@@ -228,15 +241,16 @@ export const Catalogo = () => {
                                 <h2 className="card-title text-lg group-hover:text-primario transition-colors duration-300">
                                     {recurso.name}
                                 </h2>
-                                <p className="text-gray-600 text-sm line-clamp-2">
-                                    {recurso.description || 'Sin descripción'}
-                                </p>
+                                <div 
+                                    className="text-gray-600 text-sm line-clamp-2 prose prose-sm max-w-none"
+                                    dangerouslySetInnerHTML={{ __html: recurso.description || 'Sin descripción' }}
+                                />
 
                                 {/* Información según tipo */}
                                 <div className="mt-2 space-y-1">
                                     {recurso.tipo === 'Equipo' ? (
                                         <p className="text-xs text-gray-500">
-                                            <span className="font-semibold">Categoría:</span> {recurso.category || 'No especificada'}
+                                            <span className="font-semibold">Categoría:</span> {formatearCategoria(recurso.category)}
                                         </p>
                                     ) : (
                                         <p className="text-xs text-gray-500">

@@ -14,6 +14,7 @@ const Login = lazy(() => import('./Pages/Login.jsx').then(module => ({ default: 
 const Catalogo = lazy(() => import('./Pages/Catalogo.jsx').then(module => ({ default: module.Catalogo })));
 const DetalleEquipo = lazy(() => import('./Pages/DetalleEquipo.jsx').then(module => ({ default: module.DetalleEquipo })));
 const ReservaForm = lazy(() => import('./Pages/ReservaForm.jsx').then(module => ({ default: module.ReservaForm })));
+const Perfil = lazy(() => import('./Pages/Perfil.jsx').then(module => ({ default: module.Perfil })));
 
 // Componente de carga mientras se cargan las páginas
 const LoadingFallback = () => (
@@ -43,6 +44,7 @@ export default function App() {
                 <Route path="/equipo/:id" element={<DetalleEquipo />} />
                 <Route path="/aula/:id" element={<DetalleEquipo />} />
                 <Route path="/reservas" element={<ReservaForm />} />
+                <Route path="/perfil" element={<Perfil />} />
               </Routes>
             </Suspense>
           </div>

@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router'
 import { Menu } from './Menu.jsx';
 import { GiHamburgerMenu } from "react-icons/gi";
 
+
 export const Header = () => {
     const navigate = useNavigate();
 
@@ -48,12 +49,39 @@ export const Header = () => {
             </div>
             <div className="navbar-end ">
                 {isLoggedIn ? (
-                    <button
-                        onClick={handleLogout}
-                        className="btn bg-baseRojo text-primario border-none hover:bg-[#fff]"
-                    >
-                        CERRAR SESION
-                    </button>
+                    <>
+                        <div className="flex gap-2">
+                            <div className="dropdown dropdown-end">
+                                <div tabIndex={0} role="button" className="btn btn-ghost btn-circle avatar">
+                                        {/* // primera letra y primera letra del nombre y apellido */}
+                                        <span className="text-xl font-bold">{localStorage.getItem('userEmail') ? localStorage.getItem('userEmail').charAt(0).toUpperCase() : 'U'}</span>
+
+                                </div>
+                                <ul
+                                    tabIndex="-1"
+                                    className="menu menu-sm dropdown-content bg-base-100 rounded-box z-1 mt-3 w-52 p-2 shadow">
+                                    <li>
+                                        <Link
+                                            to='/perfil'
+                                            className="btn justify-start border-none hover:bg-[#fff]"
+                                        >
+                                            Perfil
+                                        </Link>
+                                    </li>
+                                    <li>
+                                        <button
+                                            onClick={handleLogout}
+                                            className="btn justify-start h-8 bg-baseRojo text-primario border-none hover:bg-[#fff]"
+                                        >
+                                            Cerrar Sesión
+                                        </button>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+
+
+                    </>
                 ) : (
                     <Link className="btn bg-baseRojo text-primario border-none hover:bg-[#fff]" to="/login">
                         INICIAR SESION
