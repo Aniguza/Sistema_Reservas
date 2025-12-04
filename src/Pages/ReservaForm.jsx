@@ -129,16 +129,21 @@ export const ReservaForm = () => {
   };
 
   const handleConfirmReserva = async () => {
+    // Crear fecha con hora del mediodía para evitar problemas de zona horaria
+    const fechaConHora = new Date(`${formData.fecha}T12:00:00`);
+    const fechaISO = fechaConHora.toISOString();
+    
     const payload = {
       nombre: formData.nombre,
       correo: formData.correo,
       companeros: companeros,
       equipos: equipos,
       tipo: formData.tipo,
-      fecha: formData.fecha,
+      fecha: fechaISO,
       horaInicio: formData.horaInicio,
       horaFin: formData.horaFin,
-      motivo: `${formData.curso} - ${formData.proposito}`
+      motivo: `${formData.curso} - ${formData.proposito}`,
+      estado: 'confirmada'
     };
 
     try {
@@ -163,7 +168,7 @@ export const ReservaForm = () => {
       setCorreoInput('');
 
       // Mostrar mensaje de éxito con toast
-      showToast('¡Reserva realizada con éxito! 🎉 Se enviará un correo con las indicaciones.', 'success', 5000);
+      showToast('¡Reserva confirmada con éxito! 🎉 Se enviará un correo con las indicaciones.', 'success', 5000);
 
       //regresar a pagina de catalogo después de un pequeño delay para que se vea el toast
       setTimeout(() => {
