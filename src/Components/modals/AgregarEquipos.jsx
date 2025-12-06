@@ -3,9 +3,10 @@ import { FaSearch } from "react-icons/fa";
 import { useInitialData } from '../../hooks/useInitialData';
 
 export const AgregarEquipos = forwardRef(({ onSave, initialSelected = [] }, ref) => {
-    const { equipos, isLoading: loading, error } = useInitialData();
+    const { equipos, aulas, isLoading: loading, error } = useInitialData();
     const [selectedEquipos, setSelectedEquipos] = useState(initialSelected);
     const [busqueda, setBusqueda] = useState('');
+    const [filtroAula, setFiltroAula] = useState('Todas');
 
     const handleToggle = (id) => {
         if (selectedEquipos.includes(id)) {
@@ -20,14 +21,55 @@ export const AgregarEquipos = forwardRef(({ onSave, initialSelected = [] }, ref)
         ref.current?.close();
     };
 
-    // Filtrar equipos según búsqueda
-    const equiposFiltrados = equipos.filter(equipo => {
-        if (!busqueda.trim()) return true;
-        const termino = busqueda.toLowerCase();
-        const nombre = (equipo.name || equipo.nombre || '').toLowerCase();
-        const categoria = (equipo.category || '').toLowerCase();
-        return nombre.includes(termino) || categoria.includes(termino);
+    // Obtener equipos con información del aula
+    const equiposConAula = equipos.map(equipo => {
+        // Buscar en qué aula está el equipo
+        const aulaDelEquipo = aulas.find(aula => 
+            Array.isArray(aula.equipos) && aula.equipos.some(e => 
+                (typeof e === 'object' && e._id === equipo._id) || e === equipo._id
+            )
+        );
+        return {
+            ...equipo,
+            aula: aulaDelEquipo || null
+        };
     });
+
+    // Agrupar equipos por aula
+    const equiposPorAula = aulas.reduce((acc, aula) => {
+        const equiposDeAula = equiposConAula.filter(eq => eq.aula?._id === aula._id);
+        if (equiposDeAula.length > 0) {
+            acc[aula._id] = {
+                aula: aula,
+                equipos: equiposDeAula
+            };
+        }
+        return acc;
+    }, {});
+
+    // Equipos sin aula asignada
+    const equiposSinAula = equiposConAula.filter(eq => !eq.aula);
+
+    // Filtrar según búsqueda y aula seleccionada
+    const filtrarEquipos = (listaEquipos) => {
+        return listaEquipos.filter(equipo => {
+            // Filtro por búsqueda
+            if (busqueda.trim()) {
+                const termino = busqueda.toLowerCase();
+                const nombre = (equipo.name || equipo.nombre || '').toLowerCase();
+                const categoria = (equipo.category || '').toLowerCase();
+                if (!nombre.includes(termino) && !categoria.includes(termino)) {
+                    return false;
+                }
+            }
+            return true;
+        });
+    };
+
+    // Filtrar aulas según selección
+    const aulasAMostrar = filtroAula === 'Todas' 
+        ? Object.values(equiposPorAula)
+        : Object.values(equiposPorAula).filter(item => item.aula._id === filtroAula);
 
     return (
         <dialog ref={ref} className="modal">
@@ -40,8 +82,8 @@ export const AgregarEquipos = forwardRef(({ onSave, initialSelected = [] }, ref)
                     Selecciona los equipos que deseas reservar.
                 </p>
 
-                {/* Buscador */}
-                <div className="mb-4">
+                {/* Buscador y filtros */}
+                <div className="mb-4 space-y-3">
                     <label className="input input-bordered flex items-center gap-2">
                         <FaSearch className="text-gray-400" />
                         <input
@@ -52,6 +94,19 @@ export const AgregarEquipos = forwardRef(({ onSave, initialSelected = [] }, ref)
                             onChange={(e) => setBusqueda(e.target.value)}
                         />
                     </label>
+                    
+                    <select 
+                        className="select select-bordered w-full"
+                        value={filtroAula}
+                        onChange={(e) => setFiltroAula(e.target.value)}
+                    >
+                        <option value="Todas">Todas las ubicaciones</option>
+                        {aulas.map((aula) => (
+                            <option key={aula._id} value={aula._id}>
+                                {aula.name}
+                            </option>
+                        ))}
+                    </select>
                 </div>
 
                 <div className="space-y-4">
@@ -59,28 +114,68 @@ export const AgregarEquipos = forwardRef(({ onSave, initialSelected = [] }, ref)
                     {error && <p className="text-center text-red-500">{error}</p>}
 
                     {!loading && !error && (
-                        <div className="max-h-96 overflow-y-auto border rounded-lg p-3">
-                            {equiposFiltrados.length === 0 ? (
+                        <div className="max-h-96 overflow-y-auto border rounded-lg p-3 space-y-4">
+                            {aulasAMostrar.length === 0 && equiposSinAula.length === 0 ? (
                                 <p className="text-center text-gray-500">
-                                    {busqueda.trim() ? 'No se encontraron equipos' : 'No hay equipos disponibles.'}
+                                    {busqueda.trim() || filtroAula !== 'Todas' ? 'No se encontraron equipos' : 'No hay equipos disponibles.'}
                                 </p>
                             ) : (
-                                <div className="grid grid-cols-2 gap-2">
-                                    {equiposFiltrados.map((equipo) => (
-                                        <label key={equipo._id} className="label cursor-pointer justify-start gap-3 hover:bg-base-200 p-3 rounded border">
-                                            <input
-                                                type="checkbox"
-                                                className="checkbox checkbox-primary"
-                                                checked={selectedEquipos.includes(equipo._id)}
-                                                onChange={() => handleToggle(equipo._id)}
-                                            />
-                                            <div className="flex flex-col flex-1 min-w-0">
-                                                <span className="label-text font-medium truncate">{equipo.name || equipo.nombre || "Equipo sin nombre"}</span>
-                                                <span className="text-xs text-gray-400">{equipo.disponibilidad ? "Disponible" : "Ocupado"}</span>
+                                <>
+                                    {/* Equipos agrupados por aula */}
+                                    {aulasAMostrar.map(({ aula, equipos: equiposAula }) => {
+                                        const equiposFiltrados = filtrarEquipos(equiposAula);
+                                        if (equiposFiltrados.length === 0) return null;
+                                        
+                                        return (
+                                            <div key={aula._id} className="space-y-2">
+                                                <h4 className="font-semibold text-sm text-primario border-b pb-1">
+                                                    {aula.name} ({equiposFiltrados.length})
+                                                </h4>
+                                                <div className="grid grid-cols-2 gap-2">
+                                                    {equiposFiltrados.map((equipo) => (
+                                                        <label key={equipo._id} className="label cursor-pointer justify-start gap-3 hover:bg-base-200 p-3 rounded border">
+                                                            <input
+                                                                type="checkbox"
+                                                                className="checkbox checkbox-primary"
+                                                                checked={selectedEquipos.includes(equipo._id)}
+                                                                onChange={() => handleToggle(equipo._id)}
+                                                            />
+                                                            <div className="flex flex-col flex-1 min-w-0">
+                                                                <span className="label-text font-medium truncate">{equipo.name || equipo.nombre || "Equipo sin nombre"}</span>
+                                                                <span className="text-xs text-gray-400">{equipo.disponibilidad ? "Disponible" : "Ocupado"}</span>
+                                                            </div>
+                                                        </label>
+                                                    ))}
+                                                </div>
                                             </div>
-                                        </label>
-                                    ))}
-                                </div>
+                                        );
+                                    })}
+
+                                    {/* Equipos sin aula (solo si filtro es "Todas") */}
+                                    {filtroAula === 'Todas' && equiposSinAula.length > 0 && (
+                                        <div className="space-y-2">
+                                            <h4 className="font-semibold text-sm text-gray-500 border-b pb-1">
+                                                Sin ubicación asignada ({filtrarEquipos(equiposSinAula).length})
+                                            </h4>
+                                            <div className="grid grid-cols-2 gap-2">
+                                                {filtrarEquipos(equiposSinAula).map((equipo) => (
+                                                    <label key={equipo._id} className="label cursor-pointer justify-start gap-3 hover:bg-base-200 p-3 rounded border">
+                                                        <input
+                                                            type="checkbox"
+                                                            className="checkbox checkbox-primary"
+                                                            checked={selectedEquipos.includes(equipo._id)}
+                                                            onChange={() => handleToggle(equipo._id)}
+                                                        />
+                                                        <div className="flex flex-col flex-1 min-w-0">
+                                                            <span className="label-text font-medium truncate">{equipo.name || equipo.nombre || "Equipo sin nombre"}</span>
+                                                            <span className="text-xs text-gray-400">{equipo.disponibilidad ? "Disponible" : "Ocupado"}</span>
+                                                        </div>
+                                                    </label>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                </>
                             )}
                         </div>
                     )}

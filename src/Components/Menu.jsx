@@ -2,12 +2,20 @@ import React from 'react'
 import { Link } from 'react-router'
 
 export const Menu = () => {
+    const handleMenuClick = () => {
+        // Cerrar el drawer en móvil
+        const drawerCheckbox = document.getElementById('my-drawer-3');
+        if (drawerCheckbox) {
+            drawerCheckbox.checked = false;
+        }
+    };
+
     return (
         <>
-            <Link to="/">Inicio</Link>
-            <Link to="/catalogo">Equipos</Link>
-            <Link to="/reservas">Reservas</Link>
-            <Link to="/ayuda">Ayuda</Link>
+            <Link to="/" className="menuItem" onClick={handleMenuClick}>Inicio</Link>
+            <Link to="/catalogo" className="menuItem" onClick={handleMenuClick}> Equipos</Link>
+            <Link to="/reservas" className="menuItem" onClick={handleMenuClick}>Reservas</Link>
+            <Link to="/ayuda" className="menuItem" onClick={handleMenuClick}>Ayuda</Link>
         </>
     )
 }

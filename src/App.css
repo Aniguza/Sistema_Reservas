@@ -36,6 +36,11 @@
   @apply bg-blanco border-negro w-full  mb-3;
 }
 
+/* Menu estilos */
+.menuItem{
+  @apply font-bold font-lato text-[16px];
+}
+
 /* Estilos para contenido HTML de Quill */
 .prose {
   /* Encabezados */

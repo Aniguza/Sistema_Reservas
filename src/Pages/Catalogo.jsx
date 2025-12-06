@@ -179,10 +179,11 @@ export const Catalogo = () => {
                 </select>
                 <select value={filtroUbicacion} onChange={(e) => setFiltroUbicacion(e.target.value)} className="select ">
                     <option value="Todos">Ubicación</option>
-                    <option value="lab-303">Laboratorio 303</option>
-                    <option value="lab-307">Laboratorio 307</option>
-                    <option value="lab-313-1">Laboratorio de construcción digital</option>
-                    <option value="lab-313-2">Laboratorio BIM</option>
+                    {aulas.map((aula) => (
+                        <option key={aula._id} value={aula.codigo}>
+                            {aula.name}
+                        </option>
+                    ))}
                 </select>
 
             </div>

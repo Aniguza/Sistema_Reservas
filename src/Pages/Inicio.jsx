@@ -6,7 +6,7 @@ import { CardsProceso } from '../Sections/Inicio/CardsProceso.jsx'
 
 export const Inicio = () => {
   return (
-    <div>
+    <div className='w-full'>
       <Hero />
       <Equipos />
       <Mensaje />

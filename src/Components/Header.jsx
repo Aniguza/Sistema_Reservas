@@ -20,30 +20,29 @@ export const Header = () => {
     return (
         <div className="navbar text-negro font-lato">
             <div className="navbar-start">
-                <div className="dropdown">
+                <div className="dropdown lg:hidden">
                     <div className="drawer-content flex flex-col items-center justify-center">
                         {/* Page content here */}
                         <label htmlFor="my-drawer-3" className="btn drawer-button lg:hidden">
                             <GiHamburgerMenu className="h-5 w-5" />
                         </label>
                     </div>
-                    {/* <div className="drawer lg:drawer-open" tabIndex="-1">
+                     <div className="drawer lg:drawer-open" tabIndex="-1">
                         <input id="my-drawer-3" type="checkbox" className="drawer-toggle" />
                         
                         <div className="drawer-side">
                             <label htmlFor="my-drawer-3" aria-label="close sidebar" className="drawer-overlay"></label>
-                            <ul className="menu bg-base-200 min-h-full w-80 p-4">
-                                {/* Sidebar content here 
-                                <li><a>Sidebar Item 1</a></li>
-                                <li><a>Sidebar Item 2</a></li>
+                            <ul className="menu bg-base-200 min-h-full w-80 p-4 ">
+                                {/* Sidebar content here */}
+                                <Menu/>
                             </ul>
                         </div>
-                    </div> */}
+                    </div> 
                 </div>
                 <Link to="/" className="btn btn-ghost text-xl">UTP+ Lab</Link>
             </div>
             <div className="navbar-center hidden lg:flex">
-                <div className="menu menu-horizontal px-1 flex gap-4">
+                <div className="menu menu-horizontal px-1 flex gap-10">
                     <Menu />
                 </div>
             </div>
@@ -79,8 +78,6 @@ export const Header = () => {
                                 </ul>
                             </div>
                         </div>
-
-
                     </>
                 ) : (
                     <Link className="btn bg-baseRojo text-primario border-none hover:bg-[#fff]" to="/login">

@@ -8,8 +8,6 @@ export const AgregarCompañeros = forwardRef(({ onSave, initialCodes = [] }, ref
     const [currentCode, setCurrentCode] = useState("");
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
-    const [suggestions, setSuggestions] = useState([]);
-    const [showSuggestions, setShowSuggestions] = useState(false);
     const inputRef = useRef(null);
 
     // Extraer código del correo (quitar @utp.edu.pe)
@@ -23,35 +21,30 @@ export const AgregarCompañeros = forwardRef(({ onSave, initialCodes = [] }, ref
         return usuarios.find(u => extraerCodigo(u.correo) === codigo.toLowerCase());
     };
 
-    // Actualizar sugerencias mientras escribe
     const handleInputChange = (e) => {
         const value = e.target.value;
         setCurrentCode(value);
-        
-        if (value.trim().length > 0) {
-            const filtered = usuarios.filter(usuario => {
-                const codigo = extraerCodigo(usuario.correo);
-                const nombre = (usuario.nombre || '').toLowerCase();
-                const termino = value.toLowerCase();
-                return codigo.includes(termino) || nombre.includes(termino);
-            }).slice(0, 5); // Mostrar máximo 5 sugerencias
-            
-            setSuggestions(filtered);
-            setShowSuggestions(filtered.length > 0);
-        } else {
-            setSuggestions([]);
-            setShowSuggestions(false);
-        }
+        setError(null);
     };
 
-    const handleAdd = (usuario = null) => {
-        let usuarioAgregar = usuario;
-        
-        if (!usuarioAgregar && currentCode.trim()) {
-            usuarioAgregar = buscarUsuarioPorCodigo(currentCode.trim());
+    const handleAdd = () => {
+        if (!currentCode.trim()) {
+            setError('Por favor ingresa un código');
+            setTimeout(() => setError(null), 3000);
+            return;
         }
 
+        const usuarioAgregar = buscarUsuarioPorCodigo(currentCode.trim());
+
         if (usuarioAgregar) {
+            // Verificar que no sea el usuario que inició sesión
+            const userEmailLoggedIn = localStorage.getItem('userEmail');
+            if (usuarioAgregar.correo === userEmailLoggedIn) {
+                setError('No puedes agregarte a ti mismo como compañero');
+                setTimeout(() => setError(null), 3000);
+                return;
+            }
+
             const yaExiste = companeros.some(c => c._id === usuarioAgregar._id);
             if (!yaExiste) {
                 setCompaneros([...companeros, {
@@ -60,8 +53,6 @@ export const AgregarCompañeros = forwardRef(({ onSave, initialCodes = [] }, ref
                     codigo: extraerCodigo(usuarioAgregar.correo)
                 }]);
                 setCurrentCode("");
-                setSuggestions([]);
-                setShowSuggestions(false);
                 inputRef.current?.focus();
             } else {
                 setError('Este usuario ya fue agregado');
@@ -77,8 +68,6 @@ export const AgregarCompañeros = forwardRef(({ onSave, initialCodes = [] }, ref
         if (e.key === 'Enter') {
             e.preventDefault();
             handleAdd();
-        } else if (e.key === 'Escape') {
-            setShowSuggestions(false);
         }
     };
 
@@ -108,42 +97,21 @@ export const AgregarCompañeros = forwardRef(({ onSave, initialCodes = [] }, ref
                             <span className="label-text">Código Universitario</span>
                         </label>
                         <div className="flex gap-2">
-                            <div className="flex-1 relative">
-                                <input
-                                    ref={inputRef}
-                                    type="text"
-                                    placeholder="Ej: u20205313"
-                                    className="input input-bordered w-full"
-                                    value={currentCode}
-                                    onChange={handleInputChange}
-                                    onKeyDown={handleKeyDown}
-                                    onFocus={() => {
-                                        if (suggestions.length > 0) setShowSuggestions(true);
-                                    }}
-                                />
-                                
-                                {/* Sugerencias */}
-                                {showSuggestions && suggestions.length > 0 && (
-                                    <div className="absolute z-10 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-48 overflow-y-auto">
-                                        {suggestions.map((usuario) => (
-                                            <div
-                                                key={usuario._id}
-                                                className="p-3 hover:bg-base-200 cursor-pointer border-b last:border-b-0"
-                                                onClick={() => handleAdd(usuario)}
-                                            >
-                                                <div className="font-medium">{usuario.nombre}</div>
-                                                <div className="text-xs text-gray-500 font-mono">{extraerCodigo(usuario.correo)}</div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
+                            <input
+                                ref={inputRef}
+                                type="text"
+                                placeholder="Ej: u20205313"
+                                className="input input-bordered w-full"
+                                value={currentCode}
+                                onChange={handleInputChange}
+                                onKeyDown={handleKeyDown}
+                            />
                             <button 
                                 className="btn bg-primario text-white hover:bg-red-700 border-none" 
-                                onClick={() => handleAdd()} 
+                                onClick={handleAdd} 
                                 type="button"
                             >
-                                <FaPlus className="w-4 h-4" />
+                                <FaSearch className="w-4 h-4" />
                             </button>
                         </div>
                         {error && <p className="text-xs text-error mt-1">{error}</p>}

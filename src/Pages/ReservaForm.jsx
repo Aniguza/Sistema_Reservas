@@ -73,7 +73,7 @@ export const ReservaForm = () => {
 
       // Verificar que el correo coincida con el usuario logueado
       if (userEmailLoggedIn && userEmailLoggedIn.toLowerCase() !== correoCompleto.toLowerCase()) {
-        showToast('<CgDanger /> El correo debe coincidir con tu cuenta de usuario actual.', 'error');
+        showToast(' El correo debe coincidir con tu cuenta de usuario actual.', 'error');
         setIsSearching(false);
         return;
       }
@@ -262,7 +262,7 @@ export const ReservaForm = () => {
                     name="nombre"
                     value={formData.nombre}
                     onChange={handleChange}
-                    className="input campos"
+                    className="input campos text-negro"
                     placeholder="Juan Javier Pérez Juarez"
                     required
                     disabled
@@ -275,7 +275,7 @@ export const ReservaForm = () => {
                     name="carrera"
                     value={formData.carrera}
                     onChange={handleChange}
-                    className="input campos"
+                    className="input campos text-negro"
                     placeholder="Ingeniería de Sistemas"
                     required
                     disabled
