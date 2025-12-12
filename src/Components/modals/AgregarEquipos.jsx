@@ -4,16 +4,32 @@ import { useInitialData } from '../../hooks/useInitialData';
 
 export const AgregarEquipos = forwardRef(({ onSave, initialSelected = [] }, ref) => {
     const { equipos, aulas, isLoading: loading, error } = useInitialData();
+    // selectedEquipos ahora es un array de objetos: [{ equipo: id, cantidad: num }]
     const [selectedEquipos, setSelectedEquipos] = useState(initialSelected);
     const [busqueda, setBusqueda] = useState('');
     const [filtroAula, setFiltroAula] = useState('Todas');
 
-    const handleToggle = (id) => {
-        if (selectedEquipos.includes(id)) {
-            setSelectedEquipos(selectedEquipos.filter(item => item !== id));
-        } else {
-            setSelectedEquipos([...selectedEquipos, id]);
+    const handleToggle = (id, disponibilidad) => {
+        // Solo permitir seleccionar si el equipo está disponible
+        if (disponibilidad !== 'disponible') {
+            return;
         }
+        
+        const existe = selectedEquipos.find(item => item.equipo === id);
+        if (existe) {
+            // Remover el equipo
+            setSelectedEquipos(selectedEquipos.filter(item => item.equipo !== id));
+        } else {
+            // Agregar el equipo con cantidad inicial de 1
+            setSelectedEquipos([...selectedEquipos, { equipo: id, cantidad: 1 }]);
+        }
+    };
+
+    const handleCantidadChange = (id, cantidad) => {
+        const cantidadNum = parseInt(cantidad) || 1;
+        setSelectedEquipos(selectedEquipos.map(item => 
+            item.equipo === id ? { ...item, cantidad: Math.max(1, cantidadNum) } : item
+        ));
     };
 
     const handleSave = () => {
@@ -131,21 +147,54 @@ export const AgregarEquipos = forwardRef(({ onSave, initialSelected = [] }, ref)
                                                 <h4 className="font-semibold text-sm text-primario border-b pb-1">
                                                     {aula.name} ({equiposFiltrados.length})
                                                 </h4>
-                                                <div className="grid grid-cols-2 gap-2">
-                                                    {equiposFiltrados.map((equipo) => (
-                                                        <label key={equipo._id} className="label cursor-pointer justify-start gap-3 hover:bg-base-200 p-3 rounded border">
-                                                            <input
-                                                                type="checkbox"
-                                                                className="checkbox checkbox-primary"
-                                                                checked={selectedEquipos.includes(equipo._id)}
-                                                                onChange={() => handleToggle(equipo._id)}
-                                                            />
-                                                            <div className="flex flex-col flex-1 min-w-0">
-                                                                <span className="label-text font-medium truncate">{equipo.name || equipo.nombre || "Equipo sin nombre"}</span>
-                                                                <span className="text-xs text-gray-400">{equipo.disponibilidad ? "Disponible" : "Ocupado"}</span>
+                                                <div className="grid grid-cols-1 gap-3">
+                                                    {equiposFiltrados.map((equipo) => {
+                                                        const estaDisponible = equipo.disponibilidad === 'disponible';
+                                                        const equipoSeleccionado = selectedEquipos.find(item => item.equipo === equipo._id);
+                                                        const estaSeleccionado = !!equipoSeleccionado;
+                                                        
+                                                        return (
+                                                            <div 
+                                                                key={equipo._id} 
+                                                                className={`p-3 rounded border ${
+                                                                    estaDisponible 
+                                                                        ? 'hover:bg-base-200' 
+                                                                        : 'opacity-50 bg-gray-100'
+                                                                }`}
+                                                            >
+                                                                <div className="flex items-center gap-3">
+                                                                    <input
+                                                                        type="checkbox"
+                                                                        className="checkbox checkbox-primary"
+                                                                        checked={estaSeleccionado}
+                                                                        onChange={() => handleToggle(equipo._id, equipo.disponibilidad)}
+                                                                        disabled={!estaDisponible}
+                                                                    />
+                                                                    <div className="flex-1">
+                                                                        <div className="font-medium">{equipo.name || equipo.nombre || "Equipo sin nombre"}</div>
+                                                                        <div className={`text-xs ${estaDisponible ? 'text-green-600' : 'text-red-600'}`}>
+                                                                            {equipo.disponibilidad === 'disponible' ? 'Disponible' : 
+                                                                             equipo.disponibilidad === 'ocupado' ? 'Ocupado' :
+                                                                             equipo.disponibilidad === 'en mantenimiento' ? 'En mantenimiento' :
+                                                                             'No disponible'}
+                                                                        </div>
+                                                                    </div>
+                                                                    {estaSeleccionado && (
+                                                                        <div className="flex items-center gap-2">
+                                                                            <label className="text-sm font-medium">Cantidad:</label>
+                                                                            <input
+                                                                                type="number"
+                                                                                min="1"
+                                                                                value={equipoSeleccionado.cantidad}
+                                                                                onChange={(e) => handleCantidadChange(equipo._id, e.target.value)}
+                                                                                className="input input-bordered input-sm w-20"
+                                                                            />
+                                                                        </div>
+                                                                    )}
+                                                                </div>
                                                             </div>
-                                                        </label>
-                                                    ))}
+                                                        );
+                                                    })}
                                                 </div>
                                             </div>
                                         );
@@ -157,21 +206,54 @@ export const AgregarEquipos = forwardRef(({ onSave, initialSelected = [] }, ref)
                                             <h4 className="font-semibold text-sm text-gray-500 border-b pb-1">
                                                 Sin ubicación asignada ({filtrarEquipos(equiposSinAula).length})
                                             </h4>
-                                            <div className="grid grid-cols-2 gap-2">
-                                                {filtrarEquipos(equiposSinAula).map((equipo) => (
-                                                    <label key={equipo._id} className="label cursor-pointer justify-start gap-3 hover:bg-base-200 p-3 rounded border">
-                                                        <input
-                                                            type="checkbox"
-                                                            className="checkbox checkbox-primary"
-                                                            checked={selectedEquipos.includes(equipo._id)}
-                                                            onChange={() => handleToggle(equipo._id)}
-                                                        />
-                                                        <div className="flex flex-col flex-1 min-w-0">
-                                                            <span className="label-text font-medium truncate">{equipo.name || equipo.nombre || "Equipo sin nombre"}</span>
-                                                            <span className="text-xs text-gray-400">{equipo.disponibilidad ? "Disponible" : "Ocupado"}</span>
+                                            <div className="grid grid-cols-1 gap-3">
+                                                {filtrarEquipos(equiposSinAula).map((equipo) => {
+                                                    const estaDisponible = equipo.disponibilidad === 'disponible';
+                                                    const equipoSeleccionado = selectedEquipos.find(item => item.equipo === equipo._id);
+                                                    const estaSeleccionado = !!equipoSeleccionado;
+                                                    
+                                                    return (
+                                                        <div 
+                                                            key={equipo._id} 
+                                                            className={`p-3 rounded border ${
+                                                                estaDisponible 
+                                                                    ? 'hover:bg-base-200' 
+                                                                    : 'opacity-50 bg-gray-100'
+                                                            }`}
+                                                        >
+                                                            <div className="flex items-center gap-3">
+                                                                <input
+                                                                    type="checkbox"
+                                                                    className="checkbox checkbox-primary"
+                                                                    checked={estaSeleccionado}
+                                                                    onChange={() => handleToggle(equipo._id, equipo.disponibilidad)}
+                                                                    disabled={!estaDisponible}
+                                                                />
+                                                                <div className="flex-1">
+                                                                    <div className="font-medium">{equipo.name || equipo.nombre || "Equipo sin nombre"}</div>
+                                                                    <div className={`text-xs ${estaDisponible ? 'text-green-600' : 'text-red-600'}`}>
+                                                                        {equipo.disponibilidad === 'disponible' ? 'Disponible' : 
+                                                                         equipo.disponibilidad === 'ocupado' ? 'Ocupado' :
+                                                                         equipo.disponibilidad === 'en mantenimiento' ? 'En mantenimiento' :
+                                                                         'No disponible'}
+                                                                    </div>
+                                                                </div>
+                                                                {estaSeleccionado && (
+                                                                    <div className="flex items-center gap-2">
+                                                                        <label className="text-sm font-medium">Cantidad:</label>
+                                                                        <input
+                                                                            type="number"
+                                                                            min="1"
+                                                                            value={equipoSeleccionado.cantidad}
+                                                                            onChange={(e) => handleCantidadChange(equipo._id, e.target.value)}
+                                                                            className="input input-bordered input-sm w-20"
+                                                                        />
+                                                                    </div>
+                                                                )}
+                                                            </div>
                                                         </div>
-                                                    </label>
-                                                ))}
+                                                    );
+                                                })}
                                             </div>
                                         </div>
                                     )}

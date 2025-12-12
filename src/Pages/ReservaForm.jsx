@@ -5,6 +5,7 @@ import { createReserva } from '../redux/slices/reservasSlice';
 import { CgDanger } from "react-icons/cg";
 import { FaPlus, FaSearch } from "react-icons/fa";
 import { useToast } from '../Context/ToastContext';
+import { buildUrl } from '../config/api.config';
 
 import { AgregarCompañeros } from '../Components/modals/AgregarCompañeros.jsx';
 import { AgregarEquipos } from '../Components/modals/AgregarEquipos.jsx';
@@ -69,7 +70,8 @@ export const ReservaForm = () => {
         : `${correoInput}@utp.edu.pe`;
 
       // Obtener el correo del usuario logueado desde localStorage
-      const userEmailLoggedIn = localStorage.getItem('userEmail');
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      const userEmailLoggedIn = user.correo;
 
       // Verificar que el correo coincida con el usuario logueado
       if (userEmailLoggedIn && userEmailLoggedIn.toLowerCase() !== correoCompleto.toLowerCase()) {
@@ -78,16 +80,23 @@ export const ReservaForm = () => {
         return;
       }
 
-      // Buscar en la lista de usuarios
-      const usuarioEncontrado = usuarios.find(
-        user => user.correo.toLowerCase() === correoCompleto.toLowerCase()
-      );
+      // Buscar usuario en el backend
+      const token = localStorage.getItem('access_token');
+      const response = await fetch(buildUrl(`/usuarios/perfil/${correoCompleto}`), {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
 
-      if (!usuarioEncontrado) {
+      if (!response.ok) {
         showToast('No se encontró un usuario con ese correo en el sistema.', 'error');
         setIsSearching(false);
         return;
       }
+
+      const usuarioEncontrado = await response.json();
 
       // Autocompletar los campos
       setFormData(prev => ({
@@ -111,8 +120,9 @@ export const ReservaForm = () => {
     setCompaneros(codes);
   };
 
-  const handleSaveEquipos = (selectedIds) => {
-    setEquipos(selectedIds);
+  const handleSaveEquipos = (selectedEquipos) => {
+    // selectedEquipos ya viene en formato { equipo: id, cantidad: num }
+    setEquipos(selectedEquipos);
   };
 
   const handleSubmit = async (e) => {
@@ -133,11 +143,41 @@ export const ReservaForm = () => {
     const fechaConHora = new Date(`${formData.fecha}T12:00:00`);
     const fechaISO = fechaConHora.toISOString();
     
+    // Verificar disponibilidad antes de crear la reserva
+    try {
+      const token = localStorage.getItem('access_token');
+      const disponibilidadResponse = await fetch(buildUrl('/reservas/disponibilidad'), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          equipos: equipos,
+          fecha: fechaISO,
+          horaInicio: formData.horaInicio,
+          horaFin: formData.horaFin
+        })
+      });
+
+      const disponibilidadData = await disponibilidadResponse.json();
+      
+      if (!disponibilidadResponse.ok || !disponibilidadData.disponible) {
+        AceptarReservaRef.current?.close();
+        showToast(disponibilidadData.mensaje || 'Algunos equipos no están disponibles en la fecha y hora seleccionadas. Por favor, verifica las cantidades disponibles.', 'error', 6000);
+        return;
+      }
+    } catch (error) {
+      AceptarReservaRef.current?.close();
+      showToast('Error al verificar disponibilidad. Por favor, intenta nuevamente.', 'error');
+      return;
+    }
+    
     const payload = {
       nombre: formData.nombre,
       correo: formData.correo,
       companeros: companeros,
-      equipos: equipos,
+      equipos: equipos, // Ya viene en formato [{ equipo: id, cantidad: num }]
       tipo: formData.tipo,
       fecha: fechaISO,
       horaInicio: formData.horaInicio,
@@ -198,7 +238,7 @@ export const ReservaForm = () => {
     AceptarReservaRef.current?.showModal();
   };
 
-  const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+  const isLoggedIn = !!localStorage.getItem('access_token');
 
   return (
     isLoggedIn ? (
@@ -314,7 +354,7 @@ export const ReservaForm = () => {
                     <input
                       type="text"
                       readOnly
-                      value={equipos.length > 0 ? `${equipos.length} equipos seleccionados` : ''}
+                      value={equipos.length > 0 ? `${equipos.length} equipos (${equipos.reduce((total, eq) => total + eq.cantidad, 0)} unidades)` : ''}
                       className="input campos pr-12 z-1 cursor-pointer"
                       placeholder="Seleccionar equipos"
                       onClick={abrirModalEquipos}

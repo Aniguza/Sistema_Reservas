@@ -43,9 +43,9 @@ export const Login = () => {
 
       showSuccess("¡Inicio de sesión exitoso! Bienvenido 🎉", 4000);
 
-      // Guardar estado de login adicional
-      localStorage.setItem('isLoggedIn', 'true');
-      localStorage.setItem('userEmail', email);
+      // Guardar token y datos del usuario
+      localStorage.setItem('access_token', result.access_token);
+      localStorage.setItem('user', JSON.stringify(result.usuario));
 
       // Redirigir a inicio (Dashboard)
       setTimeout(() => {

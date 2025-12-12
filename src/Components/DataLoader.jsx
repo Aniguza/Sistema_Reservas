@@ -2,7 +2,6 @@ import { useEffect } from 'react';
 import { useDispatch } from 'react-redux';
 import { fetchEquipos } from '../redux/slices/equiposSlice';
 import { fetchAulas } from '../redux/slices/aulasSlice';
-import { fetchUsuarios } from '../redux/slices/usuariosSlice';
 
 /**
  * Componente para cargar datos iniciales una sola vez al inicio de la app
@@ -16,7 +15,7 @@ export const DataLoader = () => {
         // Cargar todos los datos necesarios una sola vez
         dispatch(fetchEquipos());
         dispatch(fetchAulas());
-        dispatch(fetchUsuarios());
+        // fetchUsuarios removido - ahora se usa el endpoint /usuarios/perfil/:correo individual
         
         // console.log('✅ DataLoader: Dispatches enviados');
     }, [dispatch]);

@@ -20,10 +20,9 @@ export const loginUser = createAsyncThunk(
             }
 
             const data = await response.json();
-            // Guardar token en localStorage
-            if (data.token) {
-                localStorage.setItem('token', data.token);
-            }
+            // Guardar token y datos del usuario
+            localStorage.setItem('access_token', data.access_token);
+            localStorage.setItem('user', JSON.stringify(data.usuario));
             return data;
         } catch (error) {
             return rejectWithValue(error.message);
@@ -36,7 +35,8 @@ export const logoutUser = createAsyncThunk(
     'auth/logout',
     async (_, { rejectWithValue }) => {
         try {
-            localStorage.removeItem('token');
+            localStorage.removeItem('access_token');
+            localStorage.removeItem('user');
             return true;
         } catch (error) {
             return rejectWithValue(error.message);
@@ -48,10 +48,10 @@ const authSlice = createSlice({
     name: 'auth',
     initialState: {
         user: null,
-        token: localStorage.getItem('token') || null,
+        token: localStorage.getItem('access_token') || null,
         isLoading: false,
         error: null,
-        isAuthenticated: !!localStorage.getItem('token'),
+        isAuthenticated: !!localStorage.getItem('access_token'),
     },
     reducers: {
         clearError: (state) => {
@@ -71,8 +71,8 @@ const authSlice = createSlice({
             })
             .addCase(loginUser.fulfilled, (state, action) => {
                 state.isLoading = false;
-                state.user = action.payload.user;
-                state.token = action.payload.token;
+                state.user = action.payload.usuario;
+                state.token = action.payload.access_token;
                 state.isAuthenticated = true;
                 state.error = null;
             })

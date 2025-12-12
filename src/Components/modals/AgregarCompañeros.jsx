@@ -1,9 +1,8 @@
 import React, { forwardRef, useState, useRef } from 'react'
 import { FaPlus, FaTrash, FaSearch } from "react-icons/fa";
-import { useInitialData } from '../../hooks/useInitialData';
+import { buildUrl } from '../../config/api.config';
 
 export const AgregarCompañeros = forwardRef(({ onSave, initialCodes = [] }, ref) => {
-    const { usuarios } = useInitialData();
     const [companeros, setCompaneros] = useState(initialCodes);
     const [currentCode, setCurrentCode] = useState("");
     const [loading, setLoading] = useState(false);
@@ -16,29 +15,43 @@ export const AgregarCompañeros = forwardRef(({ onSave, initialCodes = [] }, ref
         return correo.replace('@utp.edu.pe', '').toLowerCase();
     };
 
-    // Buscar usuario por código
-    const buscarUsuarioPorCodigo = (codigo) => {
-        return usuarios.find(u => extraerCodigo(u.correo) === codigo.toLowerCase());
-    };
-
     const handleInputChange = (e) => {
         const value = e.target.value;
         setCurrentCode(value);
         setError(null);
     };
 
-    const handleAdd = () => {
+    const handleAdd = async () => {
         if (!currentCode.trim()) {
             setError('Por favor ingresa un código');
             setTimeout(() => setError(null), 3000);
             return;
         }
 
-        const usuarioAgregar = buscarUsuarioPorCodigo(currentCode.trim());
+        setLoading(true);
+        setError(null);
 
-        if (usuarioAgregar) {
+        try {
+            const correoCompleto = `${currentCode.trim().toLowerCase()}@utp.edu.pe`;
+            const token = localStorage.getItem('access_token');
+            
+            const response = await fetch(buildUrl(`/usuarios/perfil/${correoCompleto}`), {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error('Usuario no encontrado');
+            }
+
+            const usuarioAgregar = await response.json();
+
             // Verificar que no sea el usuario que inició sesión
-            const userEmailLoggedIn = localStorage.getItem('userEmail');
+            const user = JSON.parse(localStorage.getItem('user') || '{}');
+            const userEmailLoggedIn = user.correo;
             if (usuarioAgregar.correo === userEmailLoggedIn) {
                 setError('No puedes agregarte a ti mismo como compañero');
                 setTimeout(() => setError(null), 3000);
@@ -58,9 +71,11 @@ export const AgregarCompañeros = forwardRef(({ onSave, initialCodes = [] }, ref
                 setError('Este usuario ya fue agregado');
                 setTimeout(() => setError(null), 3000);
             }
-        } else {
+        } catch (error) {
             setError('Usuario no encontrado');
             setTimeout(() => setError(null), 3000);
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -105,13 +120,19 @@ export const AgregarCompañeros = forwardRef(({ onSave, initialCodes = [] }, ref
                                 value={currentCode}
                                 onChange={handleInputChange}
                                 onKeyDown={handleKeyDown}
+                                disabled={loading}
                             />
                             <button 
                                 className="btn bg-primario text-white hover:bg-red-700 border-none" 
                                 onClick={handleAdd} 
                                 type="button"
+                                disabled={loading}
                             >
-                                <FaSearch className="w-4 h-4" />
+                                {loading ? (
+                                    <span className="loading loading-spinner loading-sm"></span>
+                                ) : (
+                                    <FaSearch className="w-4 h-4" />
+                                )}
                             </button>
                         </div>
                         {error && <p className="text-xs text-error mt-1">{error}</p>}

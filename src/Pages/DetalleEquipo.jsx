@@ -1,12 +1,18 @@
 import React, { useState, useEffect } from 'react'
-import { Link, useParams } from 'react-router'
+import { Link, useParams, useNavigate } from 'react-router'
+import { useSelector } from 'react-redux'
 import { CalendarioDisponibilidad } from '../Components/CalendarioDisponibilidad'
-import { getReservasEquipo, getEstadisticasReservas, agregarReserva } from '../data/dataReservas'
-import { dataEquipos, dataAulas } from '../data/dataEquipos'
+import { buildUrl } from '../config/api.config'
+import '../assets/css/calendar.css'
 
 export const DetalleEquipo = () => {
     const { id } = useParams(); // Obtener el ID de la URL
-    const equipoId = `equipo-${id}`; // Formato para las reservas
+    const navigate = useNavigate();
+    
+    // Obtener datos de Redux
+    const { items: equipos } = useSelector(state => state.equipos);
+    const { items: aulas } = useSelector(state => state.aulas);
+    const { items: reservasItems } = useSelector(state => state.reservas);
     
     // Determinar el tipo basado en la URL actual
     const currentPath = window.location.pathname;
@@ -16,42 +22,59 @@ export const DetalleEquipo = () => {
     let recurso, tipoRecurso;
     
     if (isAula) {
-        recurso = dataAulas.find(au => au.id === parseInt(id));
+        recurso = aulas.find(au => au._id === id);
         tipoRecurso = 'Aula';
     } else {
-        recurso = dataEquipos.find(eq => eq.id === parseInt(id));
+        recurso = equipos.find(eq => eq._id === id);
         tipoRecurso = 'Equipo';
     }
     
     const [reservasEquipo, setReservasEquipo] = useState({});
-    const [estadisticas, setEstadisticas] = useState({});
-    const [selectedDate, setSelectedDate] = useState({});    useEffect(() => {
-        if (recurso) {
-            // Cargar reservas del recurso (usar multimetro-1 como fallback para demo)
-            const reservas = getReservasEquipo(equipoId) || getReservasEquipo('multimetro-1');
-            setReservasEquipo(reservas);
-            
-            // Cargar estadísticas
-            const stats = getEstadisticasReservas(equipoId) || getEstadisticasReservas('multimetro-1');
-            setEstadisticas(stats);
-        }
-    }, [equipoId, recurso]);
+    const [estadisticas, setEstadisticas] = useState({
+        total: 0,
+        disponibles: 0,
+        ocupadas: 0,
+        porcentajeOcupacion: 0
+    });
+    const [selectedDate, setSelectedDate] = useState({});
+    
+    useEffect(() => {
+        if (!recurso || !id) return;
 
-    const handleDateSelect = (fecha) => {
-        setSelectedDate(fecha);
+        // Filtrar reservas del equipo/aula actual
+        const reservasDelRecurso = reservasItems.filter(reserva => {
+            if (!reserva.equipos || !Array.isArray(reserva.equipos)) return false;
+            return reserva.equipos.some(eq => {
+                const eqId = typeof eq === 'object' ? eq._id : eq;
+                return eqId === id;
+            });
+        });
+
+        // Calcular estadísticas
+        const totalDiasVisibles = 30; // Días mostrados en el calendario
+        const reservasConfirmadas = reservasDelRecurso.filter(r => r.estado === 'confirmada');
+        const ocupadas = reservasConfirmadas.length;
+        const disponibles = totalDiasVisibles - ocupadas;
+        const porcentaje = totalDiasVisibles > 0 ? Math.round((ocupadas / totalDiasVisibles) * 100) : 0;
+
+        setEstadisticas({
+            total: totalDiasVisibles,
+            disponibles: Math.max(0, disponibles),
+            ocupadas: ocupadas,
+            porcentajeOcupacion: porcentaje
+        });
+
+        console.log('Reservas del recurso:', reservasDelRecurso);
+    }, [recurso, id, reservasItems]);
+
+    const handleDateSelect = (fecha, reserva) => {
+        setSelectedDate({ fecha, reserva });
+        console.log('Fecha seleccionada:', fecha, 'Reserva:', reserva);
     };
 
-    const handleReserva = (fecha, estado) => {
-        // Actualizar datos locales
-        agregarReserva(equipoId, fecha, estado);
-        
-        // Actualizar estado del componente
-        const nuevasReservas = getReservasEquipo(equipoId);
-        setReservasEquipo(nuevasReservas);
-        
-        // Actualizar estadísticas
-        const nuevasStats = getEstadisticasReservas(equipoId);
-        setEstadisticas(nuevasStats);
+    const handleReserva = () => {
+        // Redirigir al formulario de reserva
+        navigate('/reservas');
     };
 
     // Si no se encuentra el recurso, mostrar mensaje de error
@@ -75,11 +98,11 @@ export const DetalleEquipo = () => {
                 <ul>
                     <li><Link to="/">Inicio</Link></li>
                     <li><Link to="/catalogo">Catálogo</Link></li>
-                    <li>{recurso.nombre}</li>
+                    <li>{recurso.name || recurso.nombre}</li>
                 </ul>
             </div>
             <div className='mt-4'>
-                <h1 className='titulos'>{recurso.nombre}</h1>
+                <h1 className='titulos'>{recurso.name || recurso.nombre}</h1>
                 
                 <div className="tabs tabs-border text-negro">
                     <input type="radio" name="my_tabs_2" className="tab text-negro" aria-label="Descripción" defaultChecked />
@@ -87,7 +110,7 @@ export const DetalleEquipo = () => {
                         <h3 className="subtitulos">Descripción del {tipoRecurso}</h3>
                         <div 
                             className="parrafos prose prose-lg max-w-none"
-                            dangerouslySetInnerHTML={{ __html: recurso.descripcion }}
+                            dangerouslySetInnerHTML={{ __html: recurso.description || recurso.descripcion || 'Sin descripción disponible' }}
                         />
                         
                         {/* Información básica para ambos tipos */}
@@ -95,22 +118,28 @@ export const DetalleEquipo = () => {
                             <div>
                                 <h4 className="font-semibold mb-3">Información del {tipoRecurso}:</h4>
                                 <ul className="space-y-2 text-sm">
-                                    {tipoRecurso === 'Equipo' && recurso.especificaciones && (
+                                    {tipoRecurso === 'Equipo' && recurso.brand && (
                                         <>
-                                            <li><strong>Marca:</strong> {recurso.especificaciones.marca}</li>
-                                            <li><strong>Modelo:</strong> {recurso.especificaciones.modelo}</li>
-                                            <li><strong>Año:</strong> {recurso.especificaciones.año}</li>
+                                            <li><strong>Marca:</strong> {recurso.brand}</li>
+                                            <li><strong>Modelo:</strong> {recurso.model || 'N/A'}</li>
+                                            <li><strong>Categoría:</strong> {recurso.category || 'N/A'}</li>
                                         </>
                                     )}
-                                    <li><strong>Ubicación:</strong> {recurso.ubicacion}</li>
+                                    {tipoRecurso === 'Aula' && (
+                                        <li><strong>Código:</strong> {recurso.codigo}</li>
+                                    )}
                                     {tipoRecurso === 'Equipo' && (
                                         <li><strong>Estado:</strong> 
                                             <span className={`ml-2 px-2 py-1 rounded-full text-xs font-semibold ${
-                                                recurso.disponibilidad 
-                                                    ? 'bg-green-100 text-green-800' 
-                                                    : 'bg-red-100 text-red-800'
+                                                recurso.disponibilidad === 'disponible' ? 'bg-green-100 text-green-800' :
+                                                recurso.disponibilidad === 'ocupado' ? 'bg-red-100 text-red-800' :
+                                                recurso.disponibilidad === 'en mantenimiento' ? 'bg-yellow-100 text-yellow-800' :
+                                                'bg-gray-100 text-gray-800'
                                             }`}>
-                                                {recurso.disponibilidad ? 'Disponible' : 'No Disponible'}
+                                                {recurso.disponibilidad === 'disponible' ? 'Disponible' :
+                                                 recurso.disponibilidad === 'ocupado' ? 'Ocupado' :
+                                                 recurso.disponibilidad === 'en mantenimiento' ? 'En mantenimiento' :
+                                                 'No disponible'}
                                             </span>
                                         </li>
                                     )}
@@ -148,35 +177,33 @@ export const DetalleEquipo = () => {
                             <div className="tab-content p-10">
                                 <h3 className="subtitulos">Especificaciones Técnicas</h3>
                                 
-                                {recurso.especificaciones ? (
+                                {recurso.brand ? (
                                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                         <div className="bg-baseGris p-4 rounded-lg">
                                             <h4 className="font-semibold mb-3 text-primario">Información General</h4>
                                             <ul className="space-y-1 text-sm">
-                                                <li><strong>Marca:</strong> {recurso.especificaciones.marca}</li>
-                                                <li><strong>Modelo:</strong> {recurso.especificaciones.modelo}</li>
-                                                <li><strong>Año de fabricación:</strong> {recurso.especificaciones.año}</li>
-                                                <li><strong>Estado:</strong> Operativo</li>
+                                                <li><strong>Marca:</strong> {recurso.brand}</li>
+                                                <li><strong>Modelo:</strong> {recurso.model || 'N/A'}</li>
+                                                <li><strong>Categoría:</strong> {recurso.category || 'N/A'}</li>
+                                                <li><strong>Estado:</strong> {recurso.disponibilidad || 'N/A'}</li>
                                             </ul>
                                         </div>
                                         
                                         <div className="bg-baseGris p-4 rounded-lg">
-                                            <h4 className="font-semibold mb-3 text-primario">Características Técnicas</h4>
+                                            <h4 className="font-semibold mb-3 text-primario">Características</h4>
                                             <ul className="space-y-1 text-sm">
                                                 <li><strong>Tipo:</strong> Equipo de laboratorio</li>
-                                                <li><strong>Precisión:</strong> Alta</li>
-                                                <li><strong>Calibración:</strong> Vigente</li>
-                                                <li><strong>Certificación:</strong> ISO 9001</li>
+                                                <li><strong>Uso:</strong> Académico</li>
+                                                <li><strong>Certificación:</strong> Verificado</li>
                                             </ul>
                                         </div>
                                         
                                         <div className="bg-baseGris p-4 rounded-lg">
-                                            <h4 className="font-semibold mb-3 text-primario">Condiciones de Uso</h4>
+                                            <h4 className="font-semibold mb-3 text-primario">Condiciones</h4>
                                             <ul className="space-y-1 text-sm">
-                                                <li><strong>Temperatura:</strong> 15-25°C</li>
-                                                <li><strong>Humedad:</strong> &lt; 70% RH</li>
-                                                <li><strong>Alimentación:</strong> 220V AC</li>
-                                                <li><strong>Ubicación:</strong> Laboratorio</li>
+                                                <li><strong>Disponibilidad:</strong> {recurso.disponibilidad}</li>
+                                                <li><strong>Reservable:</strong> Sí</li>
+                                                <li><strong>Ubicación:</strong> Laboratorio UTP</li>
                                             </ul>
                                         </div>
                                     </div>
@@ -231,7 +258,7 @@ export const DetalleEquipo = () => {
                         </p>
                         
                         <CalendarioDisponibilidad
-                            equipoId={equipoId}
+                            equipoId={id}
                             initialReservations={reservasEquipo}
                             onDateSelect={handleDateSelect}
                             onReserva={handleReserva}

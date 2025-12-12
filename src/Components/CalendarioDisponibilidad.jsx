@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { getReservasEquipo, agregarReserva, eliminarReserva } from '../data/dataReservas';
+import { useSelector } from 'react-redux';
+import { buildUrl } from '../config/api.config';
 import "cally";
 
 export const CalendarioDisponibilidad = ({ 
@@ -9,25 +10,80 @@ export const CalendarioDisponibilidad = ({
     onReserva = () => {} 
 }) => {
     const calendarRef = useRef(null);
+    const { items: reservasItems } = useSelector(state => state.reservas);
     
-    const [reservations, setReservations] = useState(initialReservations);
+    const [reservations, setReservations] = useState({});
     const [selectedDate, setSelectedDate] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
     const [reservaSeleccionada, setReservaSeleccionada] = useState(null);
+
+    // Función para verificar disponibilidad
+    const verificarDisponibilidad = async (fecha, horaInicio = '08:00', horaFin = '18:00', cantidad = 1) => {
+        try {
+            const token = localStorage.getItem('access_token');
+            const response = await fetch(buildUrl('/reservas/disponibilidad'), {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    equipos: [{ equipo: equipoId, cantidad: cantidad }],
+                    fecha: fecha,
+                    horaInicio: horaInicio,
+                    horaFin: horaFin
+                })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'Error al verificar disponibilidad');
+            }
+
+            const data = await response.json();
+            return { disponible: data.disponible, mensaje: data.mensaje };
+        } catch (error) {
+            console.error('Error al verificar disponibilidad:', error);
+            return { disponible: false, mensaje: error.message || 'Error al verificar disponibilidad' };
+        }
+    };
+
+    // Función para hacer una reserva (redirige al formulario)
+    const handleReserva = async (fecha) => {
+        setIsLoading(true);
+        try {
+            // Verificar disponibilidad primero
+            const resultado = await verificarDisponibilidad(fecha);
+            
+            if (!resultado.disponible) {
+                alert(resultado.mensaje || 'Este equipo no está disponible en la fecha seleccionada. Por favor, elige otra fecha.');
+                return;
+            }
+            
+            // Redirigir al formulario de reserva
+            onReserva(fecha, 'available');
+            alert(`Redirigiendo al formulario de reserva para ${formatearFecha(fecha)}`);
+        } catch (error) {
+            console.error('Error al verificar disponibilidad:', error);
+            alert('Error al verificar disponibilidad. Inténtalo de nuevo.');
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     // Función para actualizar la apariencia del calendario
     const updateCalendarAppearance = (calendar) => {
         setTimeout(() => {
             const dayElements = calendar.querySelectorAll('[slot="day"]');
-            console.log('Actualizando calendario con reservas:', reservations); // Debug
+            console.log('=== ACTUALIZANDO CALENDARIO ===');
+            console.log('Total días encontrados:', dayElements.length);
+            console.log('Reservas disponibles:', Object.keys(reservations).length);
+            console.log('Reservas:', reservations);
             
             dayElements.forEach(dayElement => {
                 const date = dayElement.getAttribute('aria-label');
                 if (date) {
                     try {
-                        // Usar directamente la fecha sin conversiones de zona horaria
-                        const dateString = date;
-                        
                         // Limpiar estilos anteriores
                         dayElement.removeAttribute('data-status');
                         dayElement.removeAttribute('data-range-start');
@@ -35,30 +91,38 @@ export const CalendarioDisponibilidad = ({
                         dayElement.removeAttribute('data-range-end');
                         dayElement.removeAttribute('data-range-single');
                         
-                        // Aplicar estado según reservations
-                        const estado = reservations[dateString];
-                        console.log(`Fecha ${dateString}:`, estado); // Debug
+                        // Buscar en reservations por la fecha
+                        let estado = null;
                         
-                        if (estado) {
-                            dayElement.setAttribute('data-status', estado);
-                            console.log(`Aplicando estado ${estado} a fecha ${dateString}`); // Debug
+                        // Intentar múltiples formatos de fecha
+                        for (let key in reservations) {
+                            if (date.includes(key) || key.includes(date.split(' ')[0])) {
+                                estado = reservations[key];
+                                console.log(`✓ Coincidencia encontrada: ${date} -> ${key}`, estado);
+                                break;
+                            }
+                        }
+                        
+                        if (estado && typeof estado === 'object') {
+                            const estadoStr = estado.estado || 'available';
+                            dayElement.setAttribute('data-status', estadoStr);
                             
                             // Solo aplicar estilos inline si la fecha NO está seleccionada
                             const isSelected = dayElement.getAttribute('aria-selected') === 'true';
                             if (!isSelected) {
-                                // Aplicar estilos directamente como fallback
-                                if (estado === 'occupied') {
-                                    dayElement.style.backgroundColor = '#ef4444';
-                                    dayElement.style.color = 'white';
-                                    dayElement.style.fontWeight = '600';
-                                } else if (estado === 'available') {
-                                    dayElement.style.backgroundColor = '#10b981';
-                                    dayElement.style.color = 'white';
-                                    dayElement.style.fontWeight = '600';
+                                // Aplicar estilos directamente con !important
+                                if (estadoStr === 'occupied') {
+                                    dayElement.style.setProperty('background-color', '#ef4444', 'important');
+                                    dayElement.style.setProperty('color', 'white', 'important');
+                                    dayElement.style.setProperty('font-weight', '600', 'important');
+                                } else if (estadoStr === 'available') {
+                                    dayElement.style.setProperty('background-color', '#10b981', 'important');
+                                    dayElement.style.setProperty('color', 'white', 'important');
+                                    dayElement.style.setProperty('font-weight', '600', 'important');
                                 }
                             }
                         } else {
-                            // Solo limpiar estilos inline si la fecha NO está seleccionada
+                            // Limpiar estilos inline si la fecha NO está seleccionada
                             const isSelected = dayElement.getAttribute('aria-selected') === 'true';
                             if (!isSelected) {
                                 dayElement.style.backgroundColor = '';
@@ -71,109 +135,99 @@ export const CalendarioDisponibilidad = ({
                     }
                 }
             });
-        }, 500); // Aumentar el timeout para dar más tiempo al calendario
+            
+            console.log('=== FIN ACTUALIZACIÓN ===');
+        }, 500);
     };
 
-    // Configurar calendario
+    // Cargar reservas del equipo desde Redux
     useEffect(() => {
-        // Actualizar las reservations cuando cambien las initialReservations
-        setReservations(initialReservations);
-    }, [initialReservations]);
+        if (!equipoId) return;
 
-    useEffect(() => {
-        const setupCalendar = (calendarRef) => {
-            if (calendarRef.current) {
-                const calendar = calendarRef.current;
-                
-                // Escuchar cambios de fecha
-                const handleDateChange = (e) => {
-                    const selectedDate = e.target.value;
-                    setSelectedDate(selectedDate);
-                    
-                    // Obtener información de la reserva para esa fecha
-                    const estado = reservations[selectedDate];
-                    setReservaSeleccionada(estado ? { estado, fecha: selectedDate } : null);
-                    
-                    onDateSelect(selectedDate);
-                };
+        // Filtrar reservas que incluyan este equipo
+        const reservasDelEquipo = reservasItems.filter(reserva => {
+            if (!reserva.equipos || !Array.isArray(reserva.equipos)) return false;
+            
+            // Verificar si el equipo está en la lista de equipos de la reserva
+            return reserva.equipos.some(eq => {
+                const eqId = typeof eq === 'object' ? eq._id : eq;
+                return eqId === equipoId;
+            });
+        });
 
-                calendar.addEventListener('change', handleDateChange);
-                
-                // Configurar apariencia inicial
-                updateCalendarAppearance(calendar);
-
-                // Cleanup
-                return () => {
-                    calendar.removeEventListener('change', handleDateChange);
+        // Convertir reservas a formato de calendario
+        const reservationsMap = {};
+        reservasDelEquipo.forEach(reserva => {
+            if (!reserva.fecha) return;
+            
+            // Obtener solo la fecha (YYYY-MM-DD)
+            const fecha = new Date(reserva.fecha).toISOString().split('T')[0];
+            
+            // Marcar la fecha como ocupada si la reserva está confirmada
+            if (reserva.estado === 'confirmada') {
+                reservationsMap[fecha] = {
+                    estado: 'occupied',
+                    usuario: reserva.nombre,
+                    correo: reserva.correo,
+                    horaInicio: reserva.horaInicio,
+                    horaFin: reserva.horaFin,
+                    motivo: reserva.motivo,
+                    fechaInicio: fecha,
+                    fechaFin: fecha
                 };
             }
+        });
+
+        setReservations(reservationsMap);
+    }, [equipoId, reservasItems]);
+
+    // Setup del calendario
+    useEffect(() => {
+        if (!calendarRef.current) return;
+
+        const calendar = calendarRef.current;
+        
+        // Escuchar cambios de fecha
+        const handleDateChange = (e) => {
+            const selectedDate = e.target.value;
+            setSelectedDate(selectedDate);
+            
+            // Buscar reserva para esa fecha
+            const reserva = reservations[selectedDate];
+            setReservaSeleccionada(reserva || null);
+            
+            // Notificar al componente padre
+            onDateSelect(selectedDate, reserva);
         };
 
-        const cleanup = setupCalendar(calendarRef);
+        // Escuchar cambios en el mes para re-aplicar estilos
+        const handleMonthChange = () => {
+            setTimeout(() => {
+                updateCalendarAppearance(calendar);
+            }, 100);
+        };
+
+        calendar.addEventListener('change', handleDateChange);
+        calendar.addEventListener('monthchange', handleMonthChange);
+        
+        // Actualizar apariencia inicial
+        updateCalendarAppearance(calendar);
 
         return () => {
-            cleanup?.();
+            calendar.removeEventListener('change', handleDateChange);
+            calendar.removeEventListener('monthchange', handleMonthChange);
         };
-    }, [reservations, onDateSelect, equipoId]);
+    }, [reservations, onDateSelect]);
 
     // Efecto separado para actualizar la apariencia cuando cambien las reservaciones
     useEffect(() => {
         if (calendarRef.current) {
+            console.log('Reservaciones actualizadas, re-pintando calendario...', reservations);
             updateCalendarAppearance(calendarRef.current);
         }
     }, [reservations]);
 
-    // Función para hacer una reserva
-    const handleReserva = async (fecha) => {
-        setIsLoading(true);
-        try {
-            // Agregar la reserva usando la función global
-            await agregarReserva(equipoId, fecha, 'occupied');
-            
-            // Actualizar estado local
-            setReservations(prev => ({
-                ...prev,
-                [fecha]: 'occupied'
-            }));
-
-            // Callback para el componente padre
-            onReserva(fecha, 'occupied');
-            
-            alert(`Reserva confirmada para ${fecha}`);
-        } catch (error) {
-            console.error('Error al hacer la reserva:', error);
-            alert('Error al realizar la reserva. Inténtalo de nuevo.');
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    // Función para cancelar una reserva (si es necesario)
-    const handleCancelarReserva = async (fecha) => {
-        setIsLoading(true);
-        try {
-            // Eliminar la reserva usando la función global
-            eliminarReserva(equipoId, fecha);
-            
-            // Actualizar estado local
-            setReservations(prev => {
-                const newReservations = { ...prev };
-                delete newReservations[fecha];
-                return newReservations;
-            });
-
-            onReserva(fecha, null);
-            setReservaSeleccionada(null);
-            
-            alert(`Reserva cancelada para ${fecha}`);
-        } catch (error) {
-            console.error('Error al cancelar la reserva:', error);
-            alert('Error al cancelar la reserva. Inténtalo de nuevo.');
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
+    // Funciones de formateo
     const formatearFecha = (fecha) => {
         const opciones = { 
             year: 'numeric', 
@@ -181,19 +235,7 @@ export const CalendarioDisponibilidad = ({
             day: 'numeric',
             weekday: 'long' 
         };
-        // Usar la fecha directamente agregando hora local para evitar cambios de zona horaria
         return new Date(fecha + 'T12:00:00').toLocaleDateString('es-ES', opciones);
-    };
-
-    const formatearRangoFecha = (fechaInicio, fechaFin) => {
-        if (fechaInicio === fechaFin) {
-            return formatearFecha(fechaInicio);
-        }
-        
-        const inicio = new Date(fechaInicio + 'T12:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
-        const fin = new Date(fechaFin + 'T12:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' });
-        
-        return `${inicio} - ${fin}`;
     };
 
     return (
@@ -238,79 +280,49 @@ export const CalendarioDisponibilidad = ({
                     <h4 className="font-semibold mb-2">
                         Fecha seleccionada: {formatearFecha(selectedDate)}
                     </h4>
-                    
-                    {reservaSeleccionada ? (
+                    {reservaSeleccionada && typeof reservaSeleccionada === 'object' ? (
                         <div className="space-y-3">
                             <p className="text-sm">
-                                Estado: <span className={`font-semibold ${
-                                    reservaSeleccionada.estado === 'occupied' ? 'text-red-600' :
-                                    reservaSeleccionada.estado === 'available' ? 'text-green-600' :
-                                    'text-gray-600'
-                                }`}>
-                                    {reservaSeleccionada.estado === 'occupied' ? 'Ocupado' :
-                                     reservaSeleccionada.estado === 'available' ? 'Disponible' :
-                                     'Sin definir'}
-                                </span>
+                                Estado: <span className="font-semibold text-red-600">Ocupado</span>
                             </p>
                             
-                            {reservaSeleccionada.fechaInicio && reservaSeleccionada.fechaFin && (
-                                <div className="bg-white p-3 rounded border-l-4 border-primario">
-                                    <h5 className="font-semibold text-sm mb-2">Información de la Reserva:</h5>
-                                    <div className="space-y-1 text-sm">
-                                        <p><strong>Período:</strong> {formatearRangoFecha(reservaSeleccionada.fechaInicio, reservaSeleccionada.fechaFin)}</p>
-                                        {reservaSeleccionada.usuario && (
-                                            <p><strong>Usuario:</strong> {reservaSeleccionada.usuario}</p>
-                                        )}
-                                        {reservaSeleccionada.proposito && (
-                                            <p><strong>Propósito:</strong> {reservaSeleccionada.proposito}</p>
-                                        )}
-                                        {reservaSeleccionada.fechaInicio !== reservaSeleccionada.fechaFin && (
-                                            <p className="text-xs text-gray-500 mt-2">
-                                                Esta fecha forma parte de una reserva del {new Date(reservaSeleccionada.fechaInicio + 'T12:00:00').toLocaleDateString('es-ES')} 
-                                                al {new Date(reservaSeleccionada.fechaFin + 'T12:00:00').toLocaleDateString('es-ES')}
-                                            </p>
-                                        )}
-                                    </div>
+                            <div className="bg-white p-3 rounded border-l-4 border-primario">
+                                <h5 className="font-semibold text-sm mb-2">Información de la Reserva:</h5>
+                                <div className="space-y-1 text-sm">
+                                    {reservaSeleccionada.usuario && (
+                                        <p><strong>Usuario:</strong> {reservaSeleccionada.usuario}</p>
+                                    )}
+                                    {reservaSeleccionada.correo && (
+                                        <p><strong>Correo:</strong> {reservaSeleccionada.correo}</p>
+                                    )}
+                                    {reservaSeleccionada.horaInicio && reservaSeleccionada.horaFin && (
+                                        <p><strong>Horario:</strong> {reservaSeleccionada.horaInicio} - {reservaSeleccionada.horaFin}</p>
+                                    )}
+                                    {reservaSeleccionada.motivo && (
+                                        <p><strong>Motivo:</strong> {reservaSeleccionada.motivo}</p>
+                                    )}
                                 </div>
-                            )}
+                            </div>
+                            <p className="text-sm text-gray-600">
+                                Esta fecha ya está reservada. Por favor, selecciona otra fecha disponible.
+                            </p>
                         </div>
                     ) : (
-                        <p className="text-sm text-gray-600">
-                            Esta fecha no tiene reservas programadas.
-                        </p>
+                        <>
+                            <p className="text-sm text-gray-600">
+                                Esta fecha está disponible para reserva.
+                            </p>
+                            <div className="flex gap-3 mt-4">
+                                <button 
+                                    onClick={() => handleReserva(selectedDate)}
+                                    disabled={isLoading}
+                                    className="bg-primario text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    {isLoading ? 'Verificando...' : 'Reservar Fecha'}
+                                </button>
+                            </div>
+                        </>
                     )}
-                    
-                    <div className="flex gap-3 mt-4">
-                        {reservaSeleccionada?.estado === 'available' && (
-                            <button 
-                                onClick={() => handleReserva(selectedDate)}
-                                disabled={isLoading}
-                                className="bg-primario text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                                {isLoading ? 'Procesando...' : 'Hacer Reserva'}
-                            </button>
-                        )}
-                        
-                        {reservaSeleccionada?.estado === 'occupied' && (
-                            <button 
-                                onClick={() => handleCancelarReserva(selectedDate)}
-                                disabled={isLoading}
-                                className="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                                {isLoading ? 'Procesando...' : 'Cancelar Reserva'}
-                            </button>
-                        )}
-                        
-                        {!reservaSeleccionada && (
-                            <button 
-                                onClick={() => handleReserva(selectedDate)}
-                                disabled={isLoading}
-                                className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                                {isLoading ? 'Procesando...' : 'Reservar Fecha'}
-                            </button>
-                        )}
-                    </div>
                 </div>
             )}
         </div>

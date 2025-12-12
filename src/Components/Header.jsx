@@ -8,14 +8,13 @@ export const Header = () => {
     const navigate = useNavigate();
 
     const handleLogout = () => {
-        localStorage.removeItem('isLoggedIn');
-        localStorage.removeItem('userEmail');
-        localStorage.removeItem('token');
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('user');
         navigate('/login');
         window.location.reload(); // Para actualizar el estado del header
     };
 
-    const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+    const isLoggedIn = !!localStorage.getItem('access_token');
 
     return (
         <div className="navbar text-negro font-lato">
@@ -53,7 +52,11 @@ export const Header = () => {
                             <div className="dropdown dropdown-end">
                                 <div tabIndex={0} role="button" className="btn btn-ghost btn-circle avatar">
                                         {/* // primera letra y primera letra del nombre y apellido */}
-                                        <span className="text-xl font-bold">{localStorage.getItem('userEmail') ? localStorage.getItem('userEmail').charAt(0).toUpperCase() : 'U'}</span>
+                                        <span className="text-xl font-bold">{(() => {
+                                            const user = JSON.parse(localStorage.getItem('user') || '{}');
+                                            if (user.correo) return user.correo.charAt(0).toUpperCase();
+                                            return 'U';
+                                        })()}</span>
 
                                 </div>
                                 <ul
@@ -65,6 +68,14 @@ export const Header = () => {
                                             className="btn justify-start border-none hover:bg-[#fff]"
                                         >
                                             Perfil
+                                        </Link>
+                                    </li>
+                                    <li>
+                                        <Link
+                                            to='/mis-reservas'
+                                            className="btn justify-start border-none hover:bg-[#fff]"
+                                        >
+                                            Mis Reservas
                                         </Link>
                                     </li>
                                     <li>

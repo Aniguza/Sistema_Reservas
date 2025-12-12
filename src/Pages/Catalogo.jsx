@@ -21,6 +21,17 @@ export const Catalogo = () => {
         return categorias[categoria] || categoria || 'No especificada';
     };
 
+    // Función para formatear correctamente el estado de disponibilidad
+    const formatearDisponibilidad = (disponibilidad) => {
+        const estados = {
+            'disponible': 'Disponible',
+            'ocupado': 'Ocupado',
+            'no disponible': 'No disponible',
+            'en mantenimiento': 'En mantenimiento'
+        };
+        return estados[disponibilidad] || disponibilidad;
+    };
+
     const handleCardClick = (item) => {
         // Navegamos incluyendo el tipo de recurso en la URL
         if (item.tipo === 'Equipo') {
@@ -82,7 +93,7 @@ export const Catalogo = () => {
             if (recurso.tipo === 'Equipo' && recurso.category !== filtroCategoria) {
                 //escribir correctamente, por ejemplo si es electronicos, escribir "Electrónicos"
                 if ( recurso.category !== 'electronicos') {
-                    re
+                    return false;
                 }
                 return false;
             }
@@ -92,16 +103,21 @@ export const Catalogo = () => {
             }
         }
 
-        // Filtro por disponibilidad (solo aplicar a equipos cuando hay un filtro seleccionado)
+        // Filtro por disponibilidad (aplicar a equipos y aulas cuando hay un filtro seleccionado)
         if (filtroDisponibilidad !== 'Todos') {
-            if (recurso.tipo === 'Equipo') {
-                const estaDisponible = filtroDisponibilidad === 'Disponible';
-                if (recurso.disponibilidad !== estaDisponible) {
-                    return false;
-                }
+            // Normalizar el estado del recurso
+            const estadoRecurso = recurso.disponibilidad?.toLowerCase();
+            
+            if (filtroDisponibilidad === 'disponible' && estadoRecurso !== 'disponible') {
+                return false;
             }
-            // Si es un aula y hay filtro de disponibilidad, no mostrarla
-            if (recurso.tipo === 'Aula') {
+            if (filtroDisponibilidad === 'ocupado' && estadoRecurso !== 'ocupado' && estadoRecurso !== 'ocupada') {
+                return false;
+            }
+            if (filtroDisponibilidad === 'no disponible' && estadoRecurso !== 'no disponible') {
+                return false;
+            }
+            if (filtroDisponibilidad === 'en mantenimiento' && estadoRecurso !== 'en mantenimiento') {
                 return false;
             }
         }
@@ -174,8 +190,10 @@ export const Catalogo = () => {
                 </select>
                 <select value={filtroDisponibilidad} onChange={(e) => setFiltroDisponibilidad(e.target.value)} className="select ">
                     <option value="Todos">Disponibilidad</option>
-                    <option value="Disponible">Disponibles</option>
-                    <option value="NoDisponible">No Disponibles</option>
+                    <option value="disponible">Disponible</option>
+                    <option value="ocupado">Ocupado</option>
+                    <option value="no disponible">No disponible</option>
+                    <option value="en mantenimiento">En mantenimiento</option>
                 </select>
                 <select value={filtroUbicacion} onChange={(e) => setFiltroUbicacion(e.target.value)} className="select ">
                     <option value="Todos">Ubicación</option>
@@ -231,10 +249,26 @@ export const Catalogo = () => {
                                 </div>
 
                                 {/* Indicador de disponibilidad (solo para equipos) */}
-                                {recurso.tipo === 'Equipo' && (
-                                    <div className={`absolute top-3 right-3 px-2 py-1 rounded-full text-xs font-semibold ${recurso.disponibilidad ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
-                                        }`}>
-                                        {recurso.disponibilidad ? 'Disponible' : 'Ocupado'}
+                                {recurso.tipo === 'Equipo' && recurso.disponibilidad && (
+                                    <div className={`absolute top-3 right-3 px-2 py-1 rounded-full text-xs font-semibold ${
+                                        recurso.disponibilidad === 'disponible' ? 'bg-green-500 text-white' :
+                                        recurso.disponibilidad === 'ocupado' ? 'bg-red-500 text-white' :
+                                        recurso.disponibilidad === 'en mantenimiento' ? 'bg-yellow-500 text-white' :
+                                        'bg-gray-500 text-white'
+                                    }`}>
+                                        {formatearDisponibilidad(recurso.disponibilidad)}
+                                    </div>
+                                )}
+
+                                {/* Indicador de disponibilidad (solo para equipos) */}
+                                {recurso.tipo === 'Aula' && recurso.disponibilidad && (
+                                    <div className={`absolute top-3 right-3 px-2 py-1 rounded-full text-xs font-semibold ${
+                                        recurso.disponibilidad === 'disponible' ? 'bg-green-500 text-white' :
+                                        recurso.disponibilidad === 'ocupada' ? 'bg-red-500 text-white' :
+                                        recurso.disponibilidad === 'en mantenimiento' ? 'bg-yellow-500 text-white' :
+                                        'bg-gray-500 text-white'
+                                    }`}>
+                                        {formatearDisponibilidad(recurso.disponibilidad)}
                                     </div>
                                 )}
                             </figure>
@@ -272,9 +306,14 @@ export const Catalogo = () => {
                         <div className="text-center">
                             <FaSearch className="mx-auto h-12 w-12 text-gray-400 mb-4" />
                             <h3 className="text-lg font-medium text-gray-900 mb-2">No se encontraron equipos</h3>
-                            <p className="text-gray-500 mb-4">
-                                No hay equipos disponibles en este momento
-                            </p>
+                            {/* Si no hay equipos agregados que salga que no existen equipos y si no coinciden con los filtros que salga que no hay equipos que coincidan */}
+                            <div className="text-gray-500">
+                                {isLoading ? (
+                                    <>Cargando recursos...</>
+                                ) : (
+                                    <>No hay equipos que coincidan con tu búsqueda o filtros. Intenta ajustar tus criterios.</>
+                                )}
+                            </div>
                         </div>
                     </div>
                 )}
