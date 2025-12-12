@@ -1,54 +1,32 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router';
-import { buildUrl } from '../config/api.config';
+import { useDispatch, useSelector } from 'react-redux';
+import { fetchReservasByUser } from '../redux/slices/reservasSlice';
 import { useToast } from '../Context/ToastContext';
 import { FaEye, FaExclamationTriangle, FaHistory } from 'react-icons/fa';
 
 export const MisReservas = () => {
+    const dispatch = useDispatch();
     const { showToast } = useToast();
-    const [reservas, setReservas] = useState([]);
-    const [isLoading, setIsLoading] = useState(true);
+    const { userReservas: reservas, isLoading } = useSelector(state => state.reservas);
     const [filtroEstado, setFiltroEstado] = useState('Todas');
     const [reservaSeleccionada, setReservaSeleccionada] = useState(null);
     const detalleModalRef = useRef(null);
 
     useEffect(() => {
-        cargarReservas();
-    }, []);
-
-    const cargarReservas = async () => {
-        try {
-            setIsLoading(true);
-            const user = JSON.parse(localStorage.getItem('user') || '{}');
-            const correo = user.correo;
-            
-            if (!correo) {
-                showToast('No se encontró información del usuario', 'error');
-                return;
-            }
-
-            const token = localStorage.getItem('access_token');
-            const response = await fetch(buildUrl(`/reservas/usuario/${correo}`), {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                }
-            });
-
-            if (!response.ok) {
-                throw new Error('Error al cargar las reservas');
-            }
-
-            const data = await response.json();
-            setReservas(data);
-        } catch (error) {
-            console.error('Error:', error);
-            showToast('Error al cargar tus reservas', 'error');
-        } finally {
-            setIsLoading(false);
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        const correo = user.correo;
+        
+        if (!correo) {
+            showToast('No se encontró información del usuario', 'error');
+            return;
         }
-    };
+
+        // Solo cargar si no hay reservas en el estado
+        if (!reservas || reservas.length === 0) {
+            dispatch(fetchReservasByUser(correo));
+        }
+    }, [dispatch]);
 
     const formatearFecha = (fecha) => {
         if (!fecha) return 'N/A';

@@ -44,6 +44,31 @@ export const logoutUser = createAsyncThunk(
     }
 );
 
+// Async thunk para obtener perfil del usuario
+export const fetchUserProfile = createAsyncThunk(
+    'auth/fetchProfile',
+    async (correo, { rejectWithValue }) => {
+        try {
+            const token = localStorage.getItem('access_token');
+            const response = await fetch(buildUrl(`/usuarios/perfil/${correo}`), {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error('Error al cargar el perfil');
+            }
+
+            return await response.json();
+        } catch (error) {
+            return rejectWithValue(error.message);
+        }
+    }
+);
+
 const authSlice = createSlice({
     name: 'auth',
     initialState: {
@@ -87,6 +112,20 @@ const authSlice = createSlice({
                 state.token = null;
                 state.isAuthenticated = false;
                 state.error = null;
+            })
+            // Fetch User Profile
+            .addCase(fetchUserProfile.pending, (state) => {
+                state.isLoading = true;
+                state.error = null;
+            })
+            .addCase(fetchUserProfile.fulfilled, (state, action) => {
+                state.isLoading = false;
+                state.user = action.payload;
+                state.error = null;
+            })
+            .addCase(fetchUserProfile.rejected, (state, action) => {
+                state.isLoading = false;
+                state.error = action.payload;
             });
     },
 });

@@ -1,50 +1,29 @@
-import React, { useState, useEffect } from 'react'
+import React, { useEffect } from 'react'
 import { Link } from 'react-router';
+import { useDispatch, useSelector } from 'react-redux';
 import { FaUser, FaEnvelope, FaIdCard, FaPhone, FaUserTag, FaCalendarAlt, FaChartLine } from 'react-icons/fa';
-import { buildUrl } from '../config/api.config';
+import { fetchUserProfile } from '../redux/slices/authSlice';
 import { useToast } from '../Context/ToastContext';
 
 export const Perfil = () => {
+  const dispatch = useDispatch();
   const { showToast } = useToast();
-  const [usuarioActual, setUsuarioActual] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const user = JSON.parse(localStorage.getItem('user') || '{}');
-  const userEmail = user.correo;
+  const { user: usuarioActual, isLoading } = useSelector(state => state.auth);
 
   useEffect(() => {
-    const cargarPerfil = async () => {
-      if (!userEmail) {
-        showToast('No se encontró información del usuario', 'error');
-        setIsLoading(false);
-        return;
-      }
+    const userData = JSON.parse(localStorage.getItem('user') || '{}');
+    const userEmail = userData.correo;
+    
+    if (!userEmail) {
+      showToast('No se encontró información del usuario', 'error');
+      return;
+    }
 
-      try {
-        const token = localStorage.getItem('access_token');
-        const response = await fetch(buildUrl(`/usuarios/perfil/${userEmail}`), {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          }
-        });
-
-        if (!response.ok) {
-          throw new Error('Error al cargar el perfil');
-        }
-
-        const data = await response.json();
-        setUsuarioActual(data);
-      } catch (error) {
-        console.error('Error:', error);
-        showToast('Error al cargar tu perfil', 'error');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    cargarPerfil();
-  }, [userEmail]);
+    // Solo cargar si no hay datos del usuario o si están incompletos
+    if (!usuarioActual || !usuarioActual.estadisticas) {
+      dispatch(fetchUserProfile(userEmail));
+    }
+  }, [dispatch]);
   
   if (isLoading) {
     return (

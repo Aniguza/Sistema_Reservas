@@ -49,15 +49,17 @@ export const fetchReservas = createAsyncThunk(
     }
 );
 
-// Async thunk para obtener reservas por usuario
+// Async thunk para obtener reservas por usuario (por correo)
 export const fetchReservasByUser = createAsyncThunk(
     'reservas/fetchByUser',
-    async (userId, { rejectWithValue }) => {
+    async (correo, { rejectWithValue }) => {
         try {
-            const response = await fetch(buildUrl(`/reservas/user/${userId}`), {
+            const token = localStorage.getItem('access_token');
+            const response = await fetch(buildUrl(`/reservas/usuario/${correo}`), {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
                 },
             });
 
@@ -124,6 +126,7 @@ const reservasSlice = createSlice({
     name: 'reservas',
     initialState: {
         items: [],
+        userReservas: [],
         currentReserva: null,
         isLoading: false,
         error: null,
@@ -180,7 +183,7 @@ const reservasSlice = createSlice({
             })
             .addCase(fetchReservasByUser.fulfilled, (state, action) => {
                 state.isLoading = false;
-                state.items = action.payload;
+                state.userReservas = action.payload;
                 state.error = null;
             })
             .addCase(fetchReservasByUser.rejected, (state, action) => {
