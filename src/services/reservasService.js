@@ -1,9 +1,10 @@
 import { buildUrl } from '../config/api.config';
+import { API_ENDPOINTS } from '../config/endpoints.config';
 
 export const reservasService = {
     createReserva: async (reservaData) => {
         try {
-            const response = await fetch(buildUrl('/reservas/create'), {
+            const response = await fetch(buildUrl(API_ENDPOINTS.reservas.create), {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

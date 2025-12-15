@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useSelector } from 'react-redux';
 import { buildUrl } from '../config/api.config';
+import { API_ENDPOINTS } from '../config/endpoints.config';
 import "cally";
 
 export const CalendarioDisponibilidad = ({ 
@@ -21,7 +22,7 @@ export const CalendarioDisponibilidad = ({
     const verificarDisponibilidad = async (fecha, horaInicio = '08:00', horaFin = '18:00', cantidad = 1) => {
         try {
             const token = localStorage.getItem('access_token');
-            const response = await fetch(buildUrl('/reservas/disponibilidad'), {
+            const response = await fetch(buildUrl(API_ENDPOINTS.reservas.disponibilidad), {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

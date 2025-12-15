@@ -1,12 +1,13 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { buildUrl } from '../../config/api.config';
+import { API_ENDPOINTS } from '../../config/endpoints.config';
 
 // Async thunk para obtener todas las aulas
 export const fetchAulas = createAsyncThunk(
     'aulas/fetchAll',
     async (_, { rejectWithValue }) => {
         try {
-            const response = await fetch(buildUrl('/aulas'), {
+            const response = await fetch(buildUrl(API_ENDPOINTS.aulas.list), {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',

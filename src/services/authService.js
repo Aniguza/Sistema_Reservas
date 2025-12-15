@@ -1,9 +1,10 @@
 import { buildUrl } from '../config/api.config';
+import { API_ENDPOINTS } from '../config/endpoints.config';
 
 export const authService = {
     login: async (email, password, isAdmin = false) => {
         try {
-            const response = await fetch(buildUrl('/auth/login'), {
+            const response = await fetch(buildUrl(API_ENDPOINTS.auth.login), {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

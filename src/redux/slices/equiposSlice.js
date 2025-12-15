@@ -1,12 +1,13 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { buildUrl } from '../../config/api.config';
+import { API_ENDPOINTS } from '../../config/endpoints.config';
 
 // Async thunk para obtener todos los equipos
 export const fetchEquipos = createAsyncThunk(
     'equipos/fetchAll',
     async (_, { rejectWithValue }) => {
         try {
-            const response = await fetch(buildUrl('/equipos'), {
+            const response = await fetch(buildUrl(API_ENDPOINTS.equipos.list), {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
@@ -36,7 +37,7 @@ export const fetchEquipoById = createAsyncThunk(
     'equipos/fetchById',
     async (id, { rejectWithValue }) => {
         try {
-            const response = await fetch(buildUrl(`/equipos/${id}`), {
+            const response = await fetch(buildUrl(API_ENDPOINTS.equipos.detalle(id)), {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',

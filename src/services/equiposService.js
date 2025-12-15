@@ -1,9 +1,10 @@
 import { buildUrl } from '../config/api.config';
+import { API_ENDPOINTS } from '../config/endpoints.config';
 
 export const equiposService = {
     getAllEquipos: async () => {
         try {
-            const response = await fetch(buildUrl('/equipos'), {
+            const response = await fetch(buildUrl(API_ENDPOINTS.equipos.list), {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',

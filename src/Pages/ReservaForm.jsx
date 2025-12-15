@@ -6,6 +6,7 @@ import { CgDanger } from "react-icons/cg";
 import { FaPlus, FaSearch } from "react-icons/fa";
 import { useToast } from '../Context/ToastContext';
 import { buildUrl } from '../config/api.config';
+import { API_ENDPOINTS } from '../config/endpoints.config';
 
 import { AgregarCompañeros } from '../Components/modals/AgregarCompañeros.jsx';
 import { AgregarEquipos } from '../Components/modals/AgregarEquipos.jsx';
@@ -82,7 +83,7 @@ export const ReservaForm = () => {
 
       // Buscar usuario en el backend
       const token = localStorage.getItem('access_token');
-      const response = await fetch(buildUrl(`/usuarios/perfil/${correoCompleto}`), {
+      const response = await fetch(buildUrl(API_ENDPOINTS.usuarios.perfil(correoCompleto)), {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -146,7 +147,7 @@ export const ReservaForm = () => {
     // Verificar disponibilidad antes de crear la reserva
     try {
       const token = localStorage.getItem('access_token');
-      const disponibilidadResponse = await fetch(buildUrl('/reservas/disponibilidad'), {
+      const disponibilidadResponse = await fetch(buildUrl(API_ENDPOINTS.reservas.disponibilidad), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -1,6 +1,7 @@
 import React, { forwardRef, useState, useRef } from 'react'
 import { FaPlus, FaTrash, FaSearch } from "react-icons/fa";
 import { buildUrl } from '../../config/api.config';
+import { API_ENDPOINTS } from '../../config/endpoints.config';
 
 export const AgregarCompañeros = forwardRef(({ onSave, initialCodes = [] }, ref) => {
     const [companeros, setCompaneros] = useState(initialCodes);
@@ -35,7 +36,7 @@ export const AgregarCompañeros = forwardRef(({ onSave, initialCodes = [] }, ref
             const correoCompleto = `${currentCode.trim().toLowerCase()}@utp.edu.pe`;
             const token = localStorage.getItem('access_token');
             
-            const response = await fetch(buildUrl(`/usuarios/perfil/${correoCompleto}`), {
+            const response = await fetch(buildUrl(API_ENDPOINTS.usuarios.perfil(correoCompleto)), {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',

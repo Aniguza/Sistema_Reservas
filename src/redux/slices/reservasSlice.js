@@ -1,12 +1,13 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { buildUrl } from '../../config/api.config';
+import { API_ENDPOINTS } from '../../config/endpoints.config';
 
 // Async thunk para crear una reserva
 export const createReserva = createAsyncThunk(
     'reservas/create',
     async (reservaData, { rejectWithValue }) => {
         try {
-            const response = await fetch(buildUrl('/reservas/create'), {
+            const response = await fetch(buildUrl(API_ENDPOINTS.reservas.create), {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -31,7 +32,7 @@ export const fetchReservas = createAsyncThunk(
     'reservas/fetchAll',
     async (_, { rejectWithValue }) => {
         try {
-            const response = await fetch(buildUrl('/reservas'), {
+            const response = await fetch(buildUrl(API_ENDPOINTS.reservas.base), {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
@@ -55,7 +56,7 @@ export const fetchReservasByUser = createAsyncThunk(
     async (correo, { rejectWithValue }) => {
         try {
             const token = localStorage.getItem('access_token');
-            const response = await fetch(buildUrl(`/reservas/usuario/${correo}`), {
+            const response = await fetch(buildUrl(API_ENDPOINTS.reservas.porUsuario(correo)), {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
@@ -79,7 +80,7 @@ export const updateReserva = createAsyncThunk(
     'reservas/update',
     async ({ id, data }, { rejectWithValue }) => {
         try {
-            const response = await fetch(buildUrl(`/reservas/${id}`), {
+            const response = await fetch(buildUrl(API_ENDPOINTS.reservas.porId(id)), {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -104,7 +105,7 @@ export const deleteReserva = createAsyncThunk(
     'reservas/delete',
     async (id, { rejectWithValue }) => {
         try {
-            const response = await fetch(buildUrl(`/reservas/${id}`), {
+            const response = await fetch(buildUrl(API_ENDPOINTS.reservas.porId(id)), {
                 method: 'DELETE',
                 headers: {
                     'Content-Type': 'application/json',

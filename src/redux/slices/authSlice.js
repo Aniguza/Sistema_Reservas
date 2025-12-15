@@ -1,12 +1,13 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { buildUrl } from '../../config/api.config';
+import { API_ENDPOINTS } from '../../config/endpoints.config';
 
 // Async thunk para login
 export const loginUser = createAsyncThunk(
     'auth/login',
     async ({ email, password, isAdmin = false }, { rejectWithValue }) => {
         try {
-            const response = await fetch(buildUrl('/auth/login'), {
+            const response = await fetch(buildUrl(API_ENDPOINTS.auth.login), {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -50,7 +51,10 @@ export const fetchUserProfile = createAsyncThunk(
     async (correo, { rejectWithValue }) => {
         try {
             const token = localStorage.getItem('access_token');
-            const response = await fetch(buildUrl(`/usuarios/perfil/${correo}`), {
+            if (!token) {
+                return rejectWithValue('Sesión expirada. Inicia sesión nuevamente.');
+            }
+            const response = await fetch(buildUrl(API_ENDPOINTS.usuarios.perfil(correo)), {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
@@ -59,6 +63,11 @@ export const fetchUserProfile = createAsyncThunk(
             });
 
             if (!response.ok) {
+                if (response.status === 401) {
+                    localStorage.removeItem('access_token');
+                    localStorage.removeItem('user');
+                    return rejectWithValue('Sesión expirada. Inicia sesión nuevamente.');
+                }
                 throw new Error('Error al cargar el perfil');
             }
 
@@ -126,6 +135,11 @@ const authSlice = createSlice({
             .addCase(fetchUserProfile.rejected, (state, action) => {
                 state.isLoading = false;
                 state.error = action.payload;
+                if (action.payload === 'Sesión expirada. Inicia sesión nuevamente.') {
+                    state.user = null;
+                    state.token = null;
+                    state.isAuthenticated = false;
+                }
             });
     },
 });
