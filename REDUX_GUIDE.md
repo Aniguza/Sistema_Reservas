@@ -21,7 +21,7 @@ src/
 El archivo `.env` debe usar el prefijo `VITE_` para que Vite pueda acceder a las variables:
 
 ```env
-VITE_API_BASE="http://localhost:3000"
+VITE_API_BASE="https://sistemareservasapi-production.up.railway.app
 ```
 
 ## Uso en Componentes

@@ -57,7 +57,7 @@ export const MiComponente = () => {
 Recuerda que Vite requiere el prefijo `VITE_`:
 
 ```env
-VITE_API_BASE="http://localhost:3000"
+VITE_API_BASE="https://sistemareservasapi-production.up.railway.app"
 ```
 
 ## Próximos Pasos Recomendados

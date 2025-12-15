@@ -1,5 +1,5 @@
 // Configuración de la API base desde variables de entorno
-export const API_BASE_URL = import.meta.env.VITE_API_BASE || 'http://localhost:3000';
+export const API_BASE_URL = import.meta.env.VITE_API_BASE || 'https://sistemareservasapi-production.up.railway.app';
 
 // Configuración de headers por defecto
 export const defaultHeaders = {
