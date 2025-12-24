@@ -268,7 +268,7 @@ export const DetalleEquipo = () => {
                         <div className="mt-6 p-4 bg-blue-50 rounded-lg">
                             <h4 className="font-semibold mb-2 text-blue-800">Información importante:</h4>
                             <ul className="text-sm text-blue-700 space-y-1">
-                                <li>• Las reservas deben realizarse con al menos 24 horas de anticipación</li>
+                                <li>• Las reservas deben realizarse con al menos 48 horas de anticipación</li>
                                 <li>• {tipoRecurso === 'Equipo' ? 'El equipo debe ser devuelto en las mismas condiciones' : 'El aula debe dejarse limpia y ordenada'}</li>
                                 {tipoRecurso === 'Equipo' && <li>• Se requiere capacitación previa para el uso del equipo</li>}
                                 <li>• Las reservas pueden cancelarse hasta 2 horas antes del uso</li>
