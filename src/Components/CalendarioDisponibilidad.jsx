@@ -32,6 +32,10 @@ export const CalendarioDisponibilidad = ({
   const todayISO = useMemo(() => toISODate(new Date()), []);
   const [currentMonth, setCurrentMonth] = useState(() => startOfMonth(new Date()));
   const [selectedDate, setSelectedDate] = useState(todayISO);
+  const monthDates = useMemo(() => {
+    const baseMonth = startOfMonth(currentMonth);
+    return [baseMonth, addMonths(baseMonth, 1)];
+  }, [currentMonth]);
 
   const reservationsMap = useMemo(() => {
     if (!Array.isArray(reservationsData)) return {};
@@ -43,36 +47,45 @@ export const CalendarioDisponibilidad = ({
     }, {});
   }, [reservationsData]);
 
-  const calendarDays = useMemo(() => {
-    const reference = startOfMonth(currentMonth);
-    const startDayOfWeek = (reference.getDay() + 6) % 7;
-    const gridStart = new Date(reference);
-    gridStart.setDate(gridStart.getDate() - startDayOfWeek);
+  const calendarMonths = useMemo(() => {
+    return monthDates.map((monthDate) => {
+      const reference = startOfMonth(monthDate);
+      const startDayOfWeek = (reference.getDay() + 6) % 7;
+      const gridStart = new Date(reference);
+      gridStart.setDate(gridStart.getDate() - startDayOfWeek);
 
-    const days = [];
+      const days = [];
 
-    for (let index = 0; index < 42; index += 1) {
-      const date = new Date(gridStart);
-      date.setDate(gridStart.getDate() + index);
+      for (let index = 0; index < 42; index += 1) {
+        const date = new Date(gridStart);
+        date.setDate(gridStart.getDate() + index);
 
-      const iso = toISODate(date);
-      const isCurrentMonth = date.getMonth() === reference.getMonth();
-      const isPast = iso < todayISO;
-      const reservation = reservationsMap[iso];
-      const estado = reservation?.estado || 'available';
+        const iso = toISODate(date);
+        const isCurrentMonth = date.getMonth() === reference.getMonth();
+        const isPast = iso < todayISO;
+        const reservation = reservationsMap[iso];
+        const estado = reservation?.estado || 'available';
 
-      days.push({
-        iso,
-        date,
-        isCurrentMonth,
-        isPast,
-        reservation,
-        estado,
-      });
-    }
+        days.push({
+          iso,
+          date,
+          isCurrentMonth,
+          isPast,
+          reservation,
+          estado,
+        });
+      }
 
-    return days;
-  }, [currentMonth, reservationsMap, todayISO]);
+      return {
+        key: `${reference.getFullYear()}-${reference.getMonth()}`,
+        label: reference.toLocaleDateString('es-ES', {
+          month: 'long',
+          year: 'numeric',
+        }),
+        days,
+      };
+    });
+  }, [monthDates, reservationsMap, todayISO]);
 
   useEffect(() => {
     if (!selectedDate) return;
@@ -90,12 +103,8 @@ export const CalendarioDisponibilidad = ({
     }
   };
 
-  const monthLabel = useMemo(() => {
-    return currentMonth.toLocaleDateString('es-ES', {
-      month: 'long',
-      year: 'numeric',
-    });
-  }, [currentMonth]);
+  const primaryLabel = calendarMonths[0]?.label ?? '';
+  const secondaryLabel = calendarMonths[1]?.label ?? '';
 
   return (
     <div className="untitledui-calendar">
@@ -110,10 +119,8 @@ export const CalendarioDisponibilidad = ({
             <span aria-hidden="true">&#10094;</span>
           </button>
           <div className="calendar-month-label">
-            <span className="calendar-month-text">{monthLabel}</span>
-            <span className="calendar-subtitle">
-              {new Date(currentMonth).toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })}
-            </span>
+            <span className="calendar-month-text">{primaryLabel}</span>
+            <span className="calendar-subtitle">{secondaryLabel}</span>
           </div>
           <button
             type="button"
@@ -125,39 +132,50 @@ export const CalendarioDisponibilidad = ({
           </button>
         </header>
 
-        <div className="calendar-grid">
-          {WEEKDAY_LABELS.map((label) => (
-            <div key={label} className="calendar-weekday" aria-hidden="true">
-              {label}
-            </div>
+        <div className="calendar-months">
+          {calendarMonths.map((month) => (
+            <section key={month.key} className="calendar-month">
+              <div className="calendar-month-title">{month.label}</div>
+              <div className="calendar-grid">
+                {WEEKDAY_LABELS.map((label) => (
+                  <div
+                    key={`${month.key}-${label}`}
+                    className="calendar-weekday"
+                    aria-hidden="true"
+                  >
+                    {label}
+                  </div>
+                ))}
+
+                {month.days.map((day) => {
+                  const isSelected = day.iso === selectedDate;
+                  const hasReservation = Boolean(day.reservation);
+                  const dayClasses = [
+                    'calendar-day',
+                    day.isCurrentMonth ? '' : 'calendar-day--muted',
+                    isSelected ? 'calendar-day--selected' : '',
+                    hasReservation ? 'calendar-day--occupied' : 'calendar-day--available',
+                    day.isPast ? 'calendar-day--past' : '',
+                  ]
+                    .filter(Boolean)
+                    .join(' ');
+
+                  return (
+                    <button
+                      key={day.iso}
+                      type="button"
+                      className={dayClasses}
+                      onClick={() => handleDaySelect(day)}
+                      disabled={day.isPast}
+                      aria-pressed={isSelected}
+                    >
+                      <span>{day.date.getDate()}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
           ))}
-
-          {calendarDays.map((day) => {
-            const isSelected = day.iso === selectedDate;
-            const hasReservation = Boolean(day.reservation);
-            const dayClasses = [
-              'calendar-day',
-              day.isCurrentMonth ? '' : 'calendar-day--muted',
-              isSelected ? 'calendar-day--selected' : '',
-              hasReservation ? 'calendar-day--occupied' : 'calendar-day--available',
-              day.isPast ? 'calendar-day--past' : '',
-            ]
-              .filter(Boolean)
-              .join(' ');
-
-            return (
-              <button
-                key={day.iso}
-                type="button"
-                className={dayClasses}
-                onClick={() => handleDaySelect(day)}
-                disabled={day.isPast}
-                aria-pressed={isSelected}
-              >
-                <span>{day.date.getDate()}</span>
-              </button>
-            );
-          })}
         </div>
 
         <div className="calendar-legend">

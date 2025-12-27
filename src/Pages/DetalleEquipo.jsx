@@ -128,11 +128,11 @@ export const DetalleEquipo = () => {
                 <h1 className='titulos'>{recurso.name || recurso.nombre}</h1>
                 
                 <div className="tabs tabs-border text-negro">
-                    <input type="radio" name="my_tabs_2" className="tab text-negro" aria-label="Descripción" defaultChecked />
-                    <div className="tab-content p-10">
+                    <input type="radio" name="my_tabs_2" className="tab text-negro px-2" aria-label="Descripción" defaultChecked />
+                    <div className="tab-content p-2 mt-2 md:p-10">
                         <h3 className="subtitulos">Descripción del {tipoRecurso}</h3>
                         <div 
-                            className="parrafos prose prose-lg max-w-none"
+                            className="parrafos prose  max-w-none"
                             dangerouslySetInnerHTML={{ __html: recurso.description || recurso.descripcion || 'Sin descripción disponible' }}
                         />
                         
@@ -196,8 +196,8 @@ export const DetalleEquipo = () => {
                     {/* Pestaña de especificaciones solo para equipos */}
                     {tipoRecurso === 'Equipo' && (
                         <>
-                            <input type="radio" name="my_tabs_2" className="tab text-negro" aria-label="Especificaciones" />
-                            <div className="tab-content p-10">
+                            <input type="radio" name="my_tabs_2" className="tab text-negro px-2" aria-label="Especificaciones" />
+                            <div className="tab-content p-2 mt-2 md:p-10">
                                 <h3 className="subtitulos">Especificaciones Técnicas</h3>
                                 
                                 {recurso.brand ? (
@@ -249,12 +249,12 @@ export const DetalleEquipo = () => {
                         </>
                     )}
 
-                    <input type="radio" name="my_tabs_2" className="tab text-negro" aria-label="Disponibilidad" />
-                    <div className="tab-content p-10">
+                    <input type="radio" name="my_tabs_2" className="tab text-negro px-2" aria-label="Disponibilidad" />
+                    <div className="tab-content mt-2 md:p-10">
                         <h3 className="subtitulos">Calendario de Disponibilidad</h3>
                         
                         {/* Estadísticas de reservas */}
-                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6" >
                             <div className="bg-blue-50 p-4 rounded-lg text-center">
                                 <div className="text-2xl font-bold text-blue-600">{estadisticas.total || 0}</div>
                                 <div className="text-sm text-blue-800">Total fechas</div>
@@ -277,7 +277,7 @@ export const DetalleEquipo = () => {
                             Selecciona las fechas para ver la disponibilidad {tipoRecurso === 'Equipo' ? 'del equipo' : 'del aula'}. 
                             Las fechas en <span className="text-green-600 font-semibold">verde</span> están disponibles, 
                             las fechas en <span className="text-red-600 font-semibold">rojo</span> están ocupadas.
-                            Puedes hacer una reserva directamente desde el calendario.
+                            
                         </p>
                         
                         <CalendarioDisponibilidad
@@ -294,7 +294,6 @@ export const DetalleEquipo = () => {
                             <ul className="text-sm text-blue-700 space-y-1">
                                 <li>• Las reservas deben realizarse con al menos 48 horas de anticipación</li>
                                 <li>• {tipoRecurso === 'Equipo' ? 'El equipo debe ser devuelto en las mismas condiciones' : 'El aula debe dejarse limpia y ordenada'}</li>
-                                {tipoRecurso === 'Equipo' && <li>• Se requiere capacitación previa para el uso del equipo</li>}
                                 <li>• Las reservas pueden cancelarse hasta 2 horas antes del uso</li>
                                 {tipoRecurso === 'Aula' && <li>• Capacidad limitada según normativas de seguridad</li>}
                             </ul>

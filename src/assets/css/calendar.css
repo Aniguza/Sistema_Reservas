@@ -1,21 +1,59 @@
 .untitledui-calendar {
   display: grid;
+  justify-items: center;
   gap: 1.25rem;
 }
 
 @media (min-width: 1024px) {
-  .untitledui-calendar {
-    grid-template-columns: minmax(0, 5fr) minmax(0, 4fr);
+  .untitledui-calendar {  
+    width: 100%;
     align-items: start;
   }
 }
 
 .calendar-card {
+  width: 100%;
+  max-width: 1040px;
   background: #ffffff;
   border: 1px solid #e5e7eb;
   border-radius: 1rem;
   padding: 1.35rem;
   box-shadow: 0 12px 32px -24px rgba(15, 23, 42, 0.25);
+}
+
+.calendar-months {
+  display: grid;
+  gap: 4rem;
+}
+
+.calendar-months .calendar-month:nth-of-type(2) {
+  display: none;
+}
+
+@media (min-width: 768px) {
+  .calendar-months {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .calendar-months .calendar-month:nth-of-type(2) {
+    display: grid;
+  }
+}
+
+.calendar-month {
+  display: grid;
+  gap: 1rem;
+  padding: 10px;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.85rem;
+}
+
+.calendar-month-title {
+  text-align: center;
+  font-size: 1rem;
+  font-weight: 600;
+  text-transform: capitalize;
+  color: #0f172a;
 }
 
 .calendar-header {
@@ -92,6 +130,13 @@
   transition: all 0.2s ease;
   cursor: pointer;
 }
+@media (max-width: 768px) {
+  .calendar-day {
+    height: 2rem;
+  }
+  
+}
+
 
 .calendar-day:disabled {
   cursor: not-allowed;
