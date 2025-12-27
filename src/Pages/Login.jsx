@@ -117,7 +117,7 @@ export const Login = () => {
         </form>
         <p className="login-footer">
           ¿No tienes cuenta?{' '}
-          <Link href="/register" className="login-register-link">
+          <Link to="/register" className="login-register-link">
             Regístrate
           </Link>
         </p>

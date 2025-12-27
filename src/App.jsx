@@ -11,6 +11,7 @@ import { DataLoader } from './Components/DataLoader.jsx';
 //Pages - Lazy Loading para reducir el bundle inicial
 const Inicio = lazy(() => import('./Pages/Inicio.jsx').then(module => ({ default: module.Inicio })));
 const Login = lazy(() => import('./Pages/Login.jsx').then(module => ({ default: module.Login })));
+const Register = lazy(() => import('./Pages/Register.jsx').then(module => ({ default: module.Register })));
 const Catalogo = lazy(() => import('./Pages/Catalogo.jsx').then(module => ({ default: module.Catalogo })));
 const DetalleEquipo = lazy(() => import('./Pages/DetalleEquipo.jsx').then(module => ({ default: module.DetalleEquipo })));
 const ReservaForm = lazy(() => import('./Pages/ReservaForm.jsx').then(module => ({ default: module.ReservaForm })));
@@ -41,6 +42,7 @@ export default function App() {
               <Routes >
                 <Route path="/" element={<Inicio />} />
                 <Route path="/login" element={<Login />} />
+                <Route path="/register" element={<Register />} />
                 <Route path="/catalogo" element={<Catalogo />} />
                 <Route path="/equipo/:id" element={<DetalleEquipo />} />
                 <Route path="/aula/:id" element={<DetalleEquipo />} />

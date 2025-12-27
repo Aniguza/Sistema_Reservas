@@ -4,6 +4,7 @@ export const API_ENDPOINTS = {
     },
     usuarios: {
         list: '/usuarios',
+        create: '/usuarios',
         perfil: (correo) => `/usuarios/perfil/${encodeURIComponent(correo)}`,
     },
     reservas: {
@@ -12,6 +13,8 @@ export const API_ENDPOINTS = {
         disponibilidad: '/reservas/disponibilidad',
         porUsuario: (correo) => `/reservas/usuario/${encodeURIComponent(correo)}`,
         porId: (id) => `/reservas/${encodeURIComponent(id)}`,
+        porEquipo: (id) => `/reservas/equipo/${encodeURIComponent(id)}`,
+        porAula: (id) => `/reservas/aula/${encodeURIComponent(id)}`,
     },
     equipos: {
         list: '/equipos',

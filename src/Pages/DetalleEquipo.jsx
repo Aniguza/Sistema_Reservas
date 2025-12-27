@@ -2,8 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { Link, useParams, useNavigate } from 'react-router'
 import { useSelector } from 'react-redux'
 import { CalendarioDisponibilidad } from '../Components/CalendarioDisponibilidad'
-import { buildUrl } from '../config/api.config'
-import '../assets/css/calendar.css'
+import { reservasService } from '../services/reservasService'
 
 export const DetalleEquipo = () => {
     const { id } = useParams(); // Obtener el ID de la URL
@@ -12,7 +11,6 @@ export const DetalleEquipo = () => {
     // Obtener datos de Redux
     const { items: equipos } = useSelector(state => state.equipos);
     const { items: aulas } = useSelector(state => state.aulas);
-    const { items: reservasItems } = useSelector(state => state.reservas);
     
     // Determinar el tipo basado en la URL actual
     const currentPath = window.location.pathname;
@@ -29,7 +27,7 @@ export const DetalleEquipo = () => {
         tipoRecurso = 'Equipo';
     }
     
-    const [reservasEquipo, setReservasEquipo] = useState({});
+    const [reservasEquipo, setReservasEquipo] = useState([]);
     const [estadisticas, setEstadisticas] = useState({
         total: 0,
         disponibles: 0,
@@ -39,33 +37,58 @@ export const DetalleEquipo = () => {
     const [selectedDate, setSelectedDate] = useState({});
     
     useEffect(() => {
+        if (!id) return;
+
+        const fetchReservas = async () => {
+            const ESTADOS_ACTIVOS = new Set(['pendiente', 'confirmada', 'reprogramada', 'en_curso']);
+            try {
+                const reservas = isAula
+                    ? await reservasService.getReservasByAula(id)
+                    : await reservasService.getReservasByEquipo(id);
+
+                const reservasActivas = Array.isArray(reservas)
+                    ? reservas.filter(reserva => ESTADOS_ACTIVOS.has(String(reserva.estado || '').toLowerCase()))
+                    : [];
+
+                setReservasEquipo(reservasActivas);
+            } catch (error) {
+                console.error('Error al obtener las reservas del recurso:', error);
+                setReservasEquipo([]);
+            }
+        };
+
+        fetchReservas();
+    }, [id, isAula]);
+
+    useEffect(() => {
         if (!recurso || !id) return;
 
-        // Filtrar reservas del equipo/aula actual
-        const reservasDelRecurso = reservasItems.filter(reserva => {
-            if (!reserva.equipos || !Array.isArray(reserva.equipos)) return false;
-            return reserva.equipos.some(eq => {
-                const eqId = typeof eq === 'object' ? eq._id : eq;
-                return eqId === id;
-            });
-        });
+        const totalDiasVisibles = 30;
+        const fechasOcupadas = new Set(
+            reservasEquipo
+                .map(reserva => reserva?.fecha)
+                .filter(Boolean)
+                .map(fecha => {
+                    try {
+                        return new Date(fecha).toISOString().split('T')[0];
+                    } catch (error) {
+                        return null;
+                    }
+                })
+                .filter(Boolean)
+        );
 
-        // Calcular estadísticas
-        const totalDiasVisibles = 30; // Días mostrados en el calendario
-        const reservasConfirmadas = reservasDelRecurso.filter(r => r.estado === 'confirmada');
-        const ocupadas = reservasConfirmadas.length;
-        const disponibles = totalDiasVisibles - ocupadas;
+        const ocupadas = fechasOcupadas.size;
+        const disponibles = Math.max(0, totalDiasVisibles - ocupadas);
         const porcentaje = totalDiasVisibles > 0 ? Math.round((ocupadas / totalDiasVisibles) * 100) : 0;
 
         setEstadisticas({
             total: totalDiasVisibles,
-            disponibles: Math.max(0, disponibles),
-            ocupadas: ocupadas,
+            disponibles,
+            ocupadas,
             porcentajeOcupacion: porcentaje
         });
-
-        console.log('Reservas del recurso:', reservasDelRecurso);
-    }, [recurso, id, reservasItems]);
+    }, [recurso, id, reservasEquipo]);
 
     const handleDateSelect = (fecha, reserva) => {
         setSelectedDate({ fecha, reserva });
@@ -258,8 +281,9 @@ export const DetalleEquipo = () => {
                         </p>
                         
                         <CalendarioDisponibilidad
-                            equipoId={id}
-                            initialReservations={reservasEquipo}
+                            resourceId={id}
+                            resourceType={isAula ? 'aula' : 'equipo'}
+                            reservations={reservasEquipo}
                             onDateSelect={handleDateSelect}
                             onReserva={handleReserva}
                         />
