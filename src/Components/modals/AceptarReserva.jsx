@@ -1,4 +1,4 @@
-import React, { forwardRef } from 'react'
+import React, { forwardRef, useState } from 'react'
 import { FaPlus } from "react-icons/fa";
 import { useNavigate } from 'react-router';
 import { useToastActions } from '../../Context/ToastContext.jsx';
@@ -6,8 +6,12 @@ import { useToastActions } from '../../Context/ToastContext.jsx';
 export const AceptarReserva = forwardRef((props, ref) => {
     const { showSuccess, showError } = useToastActions();
     const navigate = useNavigate();
+    const [isLoading, setIsLoading] = useState(false);
 
     const handleReservar = async () => {
+        if (isLoading) {
+            return;
+        }
         // no dejar confirmar si no está el checkbox seleccionado
         const checkbox = document.getElementById("confirm-checkbox");
         if (!checkbox.checked) {
@@ -20,6 +24,7 @@ export const AceptarReserva = forwardRef((props, ref) => {
         }
 
         try {
+            setIsLoading(true);
             if (props.onConfirm) {
                 await props.onConfirm();
             }
@@ -32,6 +37,8 @@ export const AceptarReserva = forwardRef((props, ref) => {
         } catch (error) {
             // El error ya se maneja en ReservaForm, no necesitamos hacer nada aquí
             console.error('Error en confirmación:', error);
+        } finally {
+            setIsLoading(false);
         }
     };
     return (
@@ -53,8 +60,8 @@ export const AceptarReserva = forwardRef((props, ref) => {
                             <input type="checkbox" id="confirm-checkbox" className="checkbox checkbox-sm " />  <span className='text-gray-700 text-sm'>Acepto las condiciones y me comprometo al uso responsable</span>
                         </div>
                         <p className='text-orange-700 text-sm text-center hidden' id='confirm'>Por favor confirma que has leído y aceptado las condiciones antes de continuar.</p>
-                        <button type='submit' className="btn bg-primario text-white hover:bg-red-700 border-none" onClick={handleReservar}>
-                            Reservar
+                        <button type='submit' className="btn bg-primario text-white hover:bg-red-700 border-none" onClick={handleReservar} disabled={isLoading}>
+                            {isLoading ? <span className="loading loading-spinner loading-sm" aria-label="Creando reserva" /> : 'Reservar'}
                         </button>
 
                     </div>

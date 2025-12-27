@@ -19,5 +19,43 @@ export const reservasService = {
         } catch (error) {
             throw error;
         }
+    },
+
+    getReservasByEquipo: async (equipoId) => {
+        try {
+            const response = await fetch(buildUrl(API_ENDPOINTS.reservas.porEquipo(equipoId)), {
+                method: 'GET',
+                headers: withAuthHeaders(),
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                const message = errorData.message || 'Error al obtener las reservas del equipo';
+                throw new Error(message);
+            }
+
+            return await response.json();
+        } catch (error) {
+            throw error;
+        }
+    },
+
+    getReservasByAula: async (aulaId) => {
+        try {
+            const response = await fetch(buildUrl(API_ENDPOINTS.reservas.porAula(aulaId)), {
+                method: 'GET',
+                headers: withAuthHeaders(),
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                const message = errorData.message || 'Error al obtener las reservas del aula';
+                throw new Error(message);
+            }
+
+            return await response.json();
+        } catch (error) {
+            throw error;
+        }
     }
 };

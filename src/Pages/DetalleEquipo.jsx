@@ -2,8 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { Link, useParams, useNavigate } from 'react-router'
 import { useSelector } from 'react-redux'
 import { CalendarioDisponibilidad } from '../Components/CalendarioDisponibilidad'
-import { buildUrl } from '../config/api.config'
-import '../assets/css/calendar.css'
+import { reservasService } from '../services/reservasService'
 
 export const DetalleEquipo = () => {
     const { id } = useParams(); // Obtener el ID de la URL
@@ -12,7 +11,6 @@ export const DetalleEquipo = () => {
     // Obtener datos de Redux
     const { items: equipos } = useSelector(state => state.equipos);
     const { items: aulas } = useSelector(state => state.aulas);
-    const { items: reservasItems } = useSelector(state => state.reservas);
     
     // Determinar el tipo basado en la URL actual
     const currentPath = window.location.pathname;
@@ -29,7 +27,7 @@ export const DetalleEquipo = () => {
         tipoRecurso = 'Equipo';
     }
     
-    const [reservasEquipo, setReservasEquipo] = useState({});
+    const [reservasEquipo, setReservasEquipo] = useState([]);
     const [estadisticas, setEstadisticas] = useState({
         total: 0,
         disponibles: 0,
@@ -39,33 +37,58 @@ export const DetalleEquipo = () => {
     const [selectedDate, setSelectedDate] = useState({});
     
     useEffect(() => {
+        if (!id) return;
+
+        const fetchReservas = async () => {
+            const ESTADOS_ACTIVOS = new Set(['pendiente', 'confirmada', 'reprogramada', 'en_curso']);
+            try {
+                const reservas = isAula
+                    ? await reservasService.getReservasByAula(id)
+                    : await reservasService.getReservasByEquipo(id);
+
+                const reservasActivas = Array.isArray(reservas)
+                    ? reservas.filter(reserva => ESTADOS_ACTIVOS.has(String(reserva.estado || '').toLowerCase()))
+                    : [];
+
+                setReservasEquipo(reservasActivas);
+            } catch (error) {
+                console.error('Error al obtener las reservas del recurso:', error);
+                setReservasEquipo([]);
+            }
+        };
+
+        fetchReservas();
+    }, [id, isAula]);
+
+    useEffect(() => {
         if (!recurso || !id) return;
 
-        // Filtrar reservas del equipo/aula actual
-        const reservasDelRecurso = reservasItems.filter(reserva => {
-            if (!reserva.equipos || !Array.isArray(reserva.equipos)) return false;
-            return reserva.equipos.some(eq => {
-                const eqId = typeof eq === 'object' ? eq._id : eq;
-                return eqId === id;
-            });
-        });
+        const totalDiasVisibles = 30;
+        const fechasOcupadas = new Set(
+            reservasEquipo
+                .map(reserva => reserva?.fecha)
+                .filter(Boolean)
+                .map(fecha => {
+                    try {
+                        return new Date(fecha).toISOString().split('T')[0];
+                    } catch (error) {
+                        return null;
+                    }
+                })
+                .filter(Boolean)
+        );
 
-        // Calcular estadísticas
-        const totalDiasVisibles = 30; // Días mostrados en el calendario
-        const reservasConfirmadas = reservasDelRecurso.filter(r => r.estado === 'confirmada');
-        const ocupadas = reservasConfirmadas.length;
-        const disponibles = totalDiasVisibles - ocupadas;
+        const ocupadas = fechasOcupadas.size;
+        const disponibles = Math.max(0, totalDiasVisibles - ocupadas);
         const porcentaje = totalDiasVisibles > 0 ? Math.round((ocupadas / totalDiasVisibles) * 100) : 0;
 
         setEstadisticas({
             total: totalDiasVisibles,
-            disponibles: Math.max(0, disponibles),
-            ocupadas: ocupadas,
+            disponibles,
+            ocupadas,
             porcentajeOcupacion: porcentaje
         });
-
-        console.log('Reservas del recurso:', reservasDelRecurso);
-    }, [recurso, id, reservasItems]);
+    }, [recurso, id, reservasEquipo]);
 
     const handleDateSelect = (fecha, reserva) => {
         setSelectedDate({ fecha, reserva });
@@ -105,11 +128,11 @@ export const DetalleEquipo = () => {
                 <h1 className='titulos'>{recurso.name || recurso.nombre}</h1>
                 
                 <div className="tabs tabs-border text-negro">
-                    <input type="radio" name="my_tabs_2" className="tab text-negro" aria-label="Descripción" defaultChecked />
-                    <div className="tab-content p-10">
+                    <input type="radio" name="my_tabs_2" className="tab text-negro px-2" aria-label="Descripción" defaultChecked />
+                    <div className="tab-content p-2 mt-2 md:p-10">
                         <h3 className="subtitulos">Descripción del {tipoRecurso}</h3>
                         <div 
-                            className="parrafos prose prose-lg max-w-none"
+                            className="parrafos prose  max-w-none"
                             dangerouslySetInnerHTML={{ __html: recurso.description || recurso.descripcion || 'Sin descripción disponible' }}
                         />
                         
@@ -173,8 +196,8 @@ export const DetalleEquipo = () => {
                     {/* Pestaña de especificaciones solo para equipos */}
                     {tipoRecurso === 'Equipo' && (
                         <>
-                            <input type="radio" name="my_tabs_2" className="tab text-negro" aria-label="Especificaciones" />
-                            <div className="tab-content p-10">
+                            <input type="radio" name="my_tabs_2" className="tab text-negro px-2" aria-label="Especificaciones" />
+                            <div className="tab-content p-2 mt-2 md:p-10">
                                 <h3 className="subtitulos">Especificaciones Técnicas</h3>
                                 
                                 {recurso.brand ? (
@@ -226,12 +249,12 @@ export const DetalleEquipo = () => {
                         </>
                     )}
 
-                    <input type="radio" name="my_tabs_2" className="tab text-negro" aria-label="Disponibilidad" />
-                    <div className="tab-content p-10">
+                    <input type="radio" name="my_tabs_2" className="tab text-negro px-2" aria-label="Disponibilidad" />
+                    <div className="tab-content mt-2 md:p-10">
                         <h3 className="subtitulos">Calendario de Disponibilidad</h3>
                         
                         {/* Estadísticas de reservas */}
-                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6" >
                             <div className="bg-blue-50 p-4 rounded-lg text-center">
                                 <div className="text-2xl font-bold text-blue-600">{estadisticas.total || 0}</div>
                                 <div className="text-sm text-blue-800">Total fechas</div>
@@ -254,12 +277,13 @@ export const DetalleEquipo = () => {
                             Selecciona las fechas para ver la disponibilidad {tipoRecurso === 'Equipo' ? 'del equipo' : 'del aula'}. 
                             Las fechas en <span className="text-green-600 font-semibold">verde</span> están disponibles, 
                             las fechas en <span className="text-red-600 font-semibold">rojo</span> están ocupadas.
-                            Puedes hacer una reserva directamente desde el calendario.
+                            
                         </p>
                         
                         <CalendarioDisponibilidad
-                            equipoId={id}
-                            initialReservations={reservasEquipo}
+                            resourceId={id}
+                            resourceType={isAula ? 'aula' : 'equipo'}
+                            reservations={reservasEquipo}
                             onDateSelect={handleDateSelect}
                             onReserva={handleReserva}
                         />
@@ -268,9 +292,8 @@ export const DetalleEquipo = () => {
                         <div className="mt-6 p-4 bg-blue-50 rounded-lg">
                             <h4 className="font-semibold mb-2 text-blue-800">Información importante:</h4>
                             <ul className="text-sm text-blue-700 space-y-1">
-                                <li>• Las reservas deben realizarse con al menos 24 horas de anticipación</li>
+                                <li>• Las reservas deben realizarse con al menos 48 horas de anticipación</li>
                                 <li>• {tipoRecurso === 'Equipo' ? 'El equipo debe ser devuelto en las mismas condiciones' : 'El aula debe dejarse limpia y ordenada'}</li>
-                                {tipoRecurso === 'Equipo' && <li>• Se requiere capacitación previa para el uso del equipo</li>}
                                 <li>• Las reservas pueden cancelarse hasta 2 horas antes del uso</li>
                                 {tipoRecurso === 'Aula' && <li>• Capacidad limitada según normativas de seguridad</li>}
                             </ul>
