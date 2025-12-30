@@ -14,7 +14,7 @@ export const AgregarEquipos = forwardRef(({ onSave, initialSelected = [] }, ref)
         if (disponibilidad !== 'disponible') {
             return;
         }
-        
+
         const existe = selectedEquipos.find(item => item.equipo === id);
         if (existe) {
             // Remover el equipo
@@ -27,7 +27,7 @@ export const AgregarEquipos = forwardRef(({ onSave, initialSelected = [] }, ref)
 
     const handleCantidadChange = (id, cantidad) => {
         const cantidadNum = parseInt(cantidad) || 1;
-        setSelectedEquipos(selectedEquipos.map(item => 
+        setSelectedEquipos(selectedEquipos.map(item =>
             item.equipo === id ? { ...item, cantidad: Math.max(1, cantidadNum) } : item
         ));
     };
@@ -40,8 +40,8 @@ export const AgregarEquipos = forwardRef(({ onSave, initialSelected = [] }, ref)
     // Obtener equipos con información del aula
     const equiposConAula = equipos.map(equipo => {
         // Buscar en qué aula está el equipo
-        const aulaDelEquipo = aulas.find(aula => 
-            Array.isArray(aula.equipos) && aula.equipos.some(e => 
+        const aulaDelEquipo = aulas.find(aula =>
+            Array.isArray(aula.equipos) && aula.equipos.some(e =>
                 (typeof e === 'object' && e._id === equipo._id) || e === equipo._id
             )
         );
@@ -83,7 +83,7 @@ export const AgregarEquipos = forwardRef(({ onSave, initialSelected = [] }, ref)
     };
 
     // Filtrar aulas según selección
-    const aulasAMostrar = filtroAula === 'Todas' 
+    const aulasAMostrar = filtroAula === 'Todas'
         ? Object.values(equiposPorAula)
         : Object.values(equiposPorAula).filter(item => item.aula._id === filtroAula);
 
@@ -110,8 +110,8 @@ export const AgregarEquipos = forwardRef(({ onSave, initialSelected = [] }, ref)
                             onChange={(e) => setBusqueda(e.target.value)}
                         />
                     </label>
-                    
-                    <select 
+
+                    <select
                         className="select select-bordered w-full"
                         value={filtroAula}
                         onChange={(e) => setFiltroAula(e.target.value)}
@@ -141,26 +141,28 @@ export const AgregarEquipos = forwardRef(({ onSave, initialSelected = [] }, ref)
                                     {aulasAMostrar.map(({ aula, equipos: equiposAula }) => {
                                         const equiposFiltrados = filtrarEquipos(equiposAula);
                                         if (equiposFiltrados.length === 0) return null;
-                                        
+
                                         return (
                                             <div key={aula._id} className="space-y-2">
-                                                <h4 className="font-semibold text-sm text-primario border-b pb-1">
-                                                    {aula.name} ({equiposFiltrados.length})
-                                                </h4>
+                                                <div className='flex justify-between'>
+                                                    <h4 className="font-semibold text-sm text-primario border-b pb-1">
+                                                        {aula.name} ({equiposFiltrados.length})
+                                                    </h4>
+                                                    <p className='font-semibold text-sm text-gray-500'>{aula.codigo}</p>
+                                                </div>
                                                 <div className="grid grid-cols-1 gap-3">
                                                     {equiposFiltrados.map((equipo) => {
                                                         const estaDisponible = equipo.disponibilidad === 'disponible';
                                                         const equipoSeleccionado = selectedEquipos.find(item => item.equipo === equipo._id);
                                                         const estaSeleccionado = !!equipoSeleccionado;
-                                                        
+
                                                         return (
-                                                            <div 
-                                                                key={equipo._id} 
-                                                                className={`p-3 rounded border ${
-                                                                    estaDisponible 
-                                                                        ? 'hover:bg-base-200' 
+                                                            <div
+                                                                key={equipo._id}
+                                                                className={`p-3 rounded border ${estaDisponible
+                                                                        ? 'hover:bg-base-200'
                                                                         : 'opacity-50 bg-gray-100'
-                                                                }`}
+                                                                    }`}
                                                             >
                                                                 <div className="flex items-center gap-3">
                                                                     <input
@@ -173,10 +175,10 @@ export const AgregarEquipos = forwardRef(({ onSave, initialSelected = [] }, ref)
                                                                     <div className="flex-1">
                                                                         <div className="font-medium">{equipo.name || equipo.nombre || "Equipo sin nombre"}</div>
                                                                         <div className={`text-xs ${estaDisponible ? 'text-green-600' : 'text-red-600'}`}>
-                                                                            {equipo.disponibilidad === 'disponible' ? 'Disponible' : 
-                                                                             equipo.disponibilidad === 'ocupado' ? 'Ocupado' :
-                                                                             equipo.disponibilidad === 'en mantenimiento' ? 'En mantenimiento' :
-                                                                             'No disponible'}
+                                                                            {equipo.disponibilidad === 'disponible' ? 'Disponible' :
+                                                                                equipo.disponibilidad === 'ocupado' ? 'Ocupado' :
+                                                                                    equipo.disponibilidad === 'en mantenimiento' ? 'En mantenimiento' :
+                                                                                        'No disponible'}
                                                                         </div>
                                                                     </div>
                                                                     {estaSeleccionado && (
@@ -211,15 +213,14 @@ export const AgregarEquipos = forwardRef(({ onSave, initialSelected = [] }, ref)
                                                     const estaDisponible = equipo.disponibilidad === 'disponible';
                                                     const equipoSeleccionado = selectedEquipos.find(item => item.equipo === equipo._id);
                                                     const estaSeleccionado = !!equipoSeleccionado;
-                                                    
+
                                                     return (
-                                                        <div 
-                                                            key={equipo._id} 
-                                                            className={`p-3 rounded border ${
-                                                                estaDisponible 
-                                                                    ? 'hover:bg-base-200' 
+                                                        <div
+                                                            key={equipo._id}
+                                                            className={`p-3 rounded border ${estaDisponible
+                                                                    ? 'hover:bg-base-200'
                                                                     : 'opacity-50 bg-gray-100'
-                                                            }`}
+                                                                }`}
                                                         >
                                                             <div className="flex items-center gap-3">
                                                                 <input
@@ -232,10 +233,10 @@ export const AgregarEquipos = forwardRef(({ onSave, initialSelected = [] }, ref)
                                                                 <div className="flex-1">
                                                                     <div className="font-medium">{equipo.name || equipo.nombre || "Equipo sin nombre"}</div>
                                                                     <div className={`text-xs ${estaDisponible ? 'text-green-600' : 'text-red-600'}`}>
-                                                                        {equipo.disponibilidad === 'disponible' ? 'Disponible' : 
-                                                                         equipo.disponibilidad === 'ocupado' ? 'Ocupado' :
-                                                                         equipo.disponibilidad === 'en mantenimiento' ? 'En mantenimiento' :
-                                                                         'No disponible'}
+                                                                        {equipo.disponibilidad === 'disponible' ? 'Disponible' :
+                                                                            equipo.disponibilidad === 'ocupado' ? 'Ocupado' :
+                                                                                equipo.disponibilidad === 'en mantenimiento' ? 'En mantenimiento' :
+                                                                                    'No disponible'}
                                                                     </div>
                                                                 </div>
                                                                 {estaSeleccionado && (
