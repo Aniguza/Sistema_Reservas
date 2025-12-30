@@ -1,5 +1,5 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import { buildUrl } from '../../config/api.config';
+import { buildUrl, withAuthHeaders } from '../../config/api.config';
 import { API_ENDPOINTS } from '../../config/endpoints.config';
 
 // Async thunk para obtener todos los usuarios
@@ -9,9 +9,7 @@ export const fetchUsuarios = createAsyncThunk(
         try {
             const response = await fetch(buildUrl(API_ENDPOINTS.usuarios.list), {
                 method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
+                headers: withAuthHeaders(),
             });
 
             if (!response.ok) {

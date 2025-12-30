@@ -1,12 +1,13 @@
-import React, { useRef, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router'
 import { useDispatch, useSelector } from 'react-redux';
 import { createReserva } from '../redux/slices/reservasSlice';
 import { CgDanger } from "react-icons/cg";
-import { FaPlus, FaSearch } from "react-icons/fa";
+import { FaPlus, FaSearch, FaChevronDown  } from "react-icons/fa";
 import { useToast } from '../Context/ToastContext';
 import { buildUrl } from '../config/api.config';
 import { API_ENDPOINTS } from '../config/endpoints.config';
+import { fetchUsuarios } from '../redux/slices/usuariosSlice';
 
 import { AgregarCompañeros } from '../Components/modals/AgregarCompañeros.jsx';
 import { AgregarEquipos } from '../Components/modals/AgregarEquipos.jsx';
@@ -16,12 +17,13 @@ export const ReservaForm = () => {
   const dispatch = useDispatch();
   const { isLoading: isLoadingReserva, error, success } = useSelector(state => state.reservas);
   const { user: currentUser } = useSelector(state => state.auth);
-  const { items: usuarios } = useSelector(state => state.usuarios);
+  const { items: usuarios, loaded: usuariosLoaded } = useSelector(state => state.usuarios);
   const { showToast } = useToast();
 
   const AgregarCompañerosRef = useRef(null);
   const AgregarEquiposRef = useRef(null);
   const AceptarReservaRef = useRef(null);
+  const docenteDropdownRef = useRef(null);
 
   const [formData, setFormData] = useState({
     nombre: '',
@@ -40,6 +42,71 @@ export const ReservaForm = () => {
   const [equipos, setEquipos] = useState([]);
   const [correoInput, setCorreoInput] = useState('');
   const [isSearching, setIsSearching] = useState(false);
+  const [isDocente, setIsDocente] = useState(false);
+  const [docenteDropdownOpen, setDocenteDropdownOpen] = useState(false);
+
+  useEffect(() => {
+    if (!usuariosLoaded) {
+      dispatch(fetchUsuarios());
+    }
+  }, [dispatch, usuariosLoaded]);
+
+  const docentesDisponibles = useMemo(() => (
+    (usuarios || []).filter((usuario) => {
+      const rol = (usuario.rol || usuario.role || '').toLowerCase();
+      return rol === 'docente';
+    })
+  ), [usuarios]);
+
+  const selectedDocente = useMemo(() => (
+    docentesDisponibles.find((docente) => {
+      const docenteId = docente.correo || docente.id || docente._id || docente.nombre;
+      return docenteId && formData.docente && formData.docente === docenteId;
+    })
+  ), [docentesDisponibles, formData.docente]);
+
+  useEffect(() => {
+    if (!docenteDropdownOpen) {
+      return;
+    }
+
+    const handleClickOutside = (event) => {
+      if (docenteDropdownRef.current && !docenteDropdownRef.current.contains(event.target)) {
+        setDocenteDropdownOpen(false);
+      }
+    };
+
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        setDocenteDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [docenteDropdownOpen]);
+
+  useEffect(() => {
+    if (docentesDisponibles.length === 0) {
+      setDocenteDropdownOpen(false);
+    }
+  }, [docentesDisponibles.length]);
+
+  useEffect(() => {
+    if (formData.docente && !selectedDocente) {
+      setFormData(prev => ({ ...prev, docente: '' }));
+    }
+  }, [formData.docente, selectedDocente]);
+
+  useEffect(() => {
+    if (isDocente) {
+      setDocenteDropdownOpen(false);
+    }
+  }, [isDocente]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -55,9 +122,13 @@ export const ReservaForm = () => {
         ...prev,
         correo: '',
         nombre: '',
-        carrera: ''
+        carrera: '',
+        docente: ''
       }));
     }
+    setIsDocente(false);
+    setCompaneros([]);
+    setDocenteDropdownOpen(false);
   };
 
   const handleSearchUser = async (e) => {
@@ -99,12 +170,21 @@ export const ReservaForm = () => {
 
       const usuarioEncontrado = await response.json();
 
+      const rolDetectado = (usuarioEncontrado.rol || usuarioEncontrado.role || '').toLowerCase();
+      const esDocente = rolDetectado === 'docente' || /^c\d+/i.test(correoCompleto.split('@')[0] || '');
+      setIsDocente(esDocente);
+      setDocenteDropdownOpen(false);
+      if (esDocente && companeros.length > 0) {
+        setCompaneros([]);
+      }
+
       // Autocompletar los campos
       setFormData(prev => ({
         ...prev,
         correo: correoCompleto,
         nombre: usuarioEncontrado.nombre || '',
-        carrera: usuarioEncontrado.carrera || ''
+        carrera: usuarioEncontrado.carrera || '',
+        docente: esDocente ? '' : prev.docente
       }));
       setCorreoInput(correoInput);
       showToast('Usuario encontrado correctamente', 'success');
@@ -118,6 +198,9 @@ export const ReservaForm = () => {
   };
 
   const handleSaveCompaneros = (codes) => {
+    if (isDocente) {
+      return;
+    }
     setCompaneros(codes);
   };
 
@@ -126,11 +209,24 @@ export const ReservaForm = () => {
     setEquipos(selectedEquipos);
   };
 
+  const toggleDocenteDropdown = () => {
+    if (isDocente || docentesDisponibles.length === 0) {
+      return;
+    }
+    setDocenteDropdownOpen(prev => !prev);
+  };
+
+  const handleSelectDocente = (docente) => {
+    const docenteId = docente.correo || docente.id || docente._id || docente.nombre || '';
+    setFormData(prev => ({ ...prev, docente: docenteId }));
+    setDocenteDropdownOpen(false);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     // Validación simple de campos requeridos antes de abrir el modal
-    if (!formData.nombre || !formData.correo || !formData.fecha || !formData.horaInicio || !formData.horaFin || equipos.length === 0) {
+    if (!formData.nombre || !formData.correo || !formData.fecha || !formData.horaInicio || !formData.horaFin || equipos.length === 0 || (!isDocente && !selectedDocente)) {
       showToast('Por favor, completa todos los campos obligatorios', 'error');
       return;
     }
@@ -183,6 +279,7 @@ export const ReservaForm = () => {
       fecha: fechaISO,
       horaInicio: formData.horaInicio,
       horaFin: formData.horaFin,
+      docente: selectedDocente ? (selectedDocente.correo || selectedDocente.nombre || '') : '',
       motivo: `${formData.curso} - ${formData.proposito}`,
       estado: 'confirmada'
     };
@@ -207,6 +304,7 @@ export const ReservaForm = () => {
       setCompaneros([]);
       setEquipos([]);
       setCorreoInput('');
+      setIsDocente(false);
 
       // Mostrar mensaje de éxito con toast
       showToast('¡Reserva confirmada con éxito! 🎉 Se enviará un correo con las indicaciones.', 'success', 5000);
@@ -250,26 +348,7 @@ export const ReservaForm = () => {
           <form onSubmit={handleSubmit} className="flex flex-col items-center">
             <div className='grid grid-cols-1 sm:grid-cols-2 gap-15 lg:gap-25 justify-items-center'>
               <div className='w-full'>
-                <fieldset className="fieldset">
-                  <legend className="fieldset-legend text-negro text-sm">Códigos universitarios y/o docente*</legend>
-                  <div className="relative">
-                    <input
-                      type="text"
-                      readOnly
-                      value={companeros.length > 0 ? `${companeros.length} seleccionados` : ''}
-                      className="input campos pr-12 z-1 cursor-pointer"
-                      placeholder="Agregar códigos"
-                      onClick={abrirModalCompañeros}
-                    />
-                    <button
-                      type="button"
-                      className="absolute right-3 top-5 z-2 transform -translate-y-1/2 btn btn-sm btn-circle text-primario bg-white hover:bg-red-700 hover:text-white border-none"
-                      onClick={abrirModalCompañeros}
-                    >
-                      <FaPlus className="w-3 h-3" />
-                    </button>
-                  </div>
-                </fieldset>
+                
                 <fieldset className="fieldset">
                   <legend className="fieldset-legend text-negro text-sm">Correo académico del responsable*</legend>
                   <div className='flex top-5 gap-2'>
@@ -278,7 +357,7 @@ export const ReservaForm = () => {
                       value={correoInput}
                       onChange={handleCorreoChange}
                       className="input campos"
-                      placeholder="u20201467"
+                      placeholder="u20201467 o c36528"
                       required
                     />
                     <button 
@@ -323,29 +402,81 @@ export const ReservaForm = () => {
                   />
                 </fieldset>
                 <fieldset className="fieldset">
+                  <legend className="fieldset-legend text-negro text-sm">Códigos universitarios y/o docente*</legend>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      readOnly
+                      value={companeros.length > 0 ? `${companeros.length} seleccionados` : ''}
+                      className={`input campos pr-12 z-1 ${isDocente || docentesDisponibles.length === 0 ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}
+                      placeholder="Agregar códigos"
+                      onClick={!isDocente ? abrirModalCompañeros : undefined}
+                      disabled={isDocente}
+                    />
+                    <button
+                      type="button"
+                      className="absolute right-3 top-5 z-2 transform -translate-y-1/2 btn btn-sm btn-circle text-primario bg-white hover:bg-red-700 hover:text-white border-none"
+                      onClick={!isDocente ? abrirModalCompañeros : undefined}
+                      disabled={isDocente}
+                    >
+                      <FaPlus className={`w-3 h-3 ${isDocente ? 'opacity-60' : ''}`} />
+                    </button>
+                  </div>
+                </fieldset>
+                <fieldset className="fieldset">
                   <legend className="fieldset-legend text-negro text-sm">Docente del curso*</legend>
-                  <input
-                    type="text"
-                    name="docente"
-                    value={formData.docente}
-                    onChange={handleChange}
-                    className="input campos"
-                    placeholder="Nombre del docente"
-                    required
-                  />
+                  <div className="relative" ref={docenteDropdownRef}>
+                    <button
+                      type="button"
+                      onClick={toggleDocenteDropdown}
+                      className={`input campos pr-5 flex items-center justify-between ${isDocente || docentesDisponibles.length === 0 ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}
+                      disabled={isDocente || docentesDisponibles.length === 0}
+                      aria-haspopup="listbox"
+                      aria-expanded={docenteDropdownOpen}
+                    >
+                      <span className={`truncate ${formData.docente ? 'text-negro' : 'text-gray-500'}`}>
+                        {selectedDocente ? `${selectedDocente.nombre || 'Docente'} - ${selectedDocente.correo || 'Sin correo'}` : 'Selecciona un docente'}
+                      </span>
+                      <FaChevronDown className={`text-primario transition-transform duration-200 ${docenteDropdownOpen ? 'rotate-180' : ''}`} />
+                    </button>
+                    {docenteDropdownOpen && (
+                      <ul className="absolute z-20  w-full bg-white border border-negro rounded-md shadow-lg max-h-48 overflow-auto" role="listbox">
+                        {docentesDisponibles.map((docente, index) => {
+                          const docenteId = docente.correo || docente.id || docente._id || docente.nombre;
+                          const isSelected = formData.docente && docenteId && formData.docente === docenteId;
+                          return (
+                            <li key={docenteId || docente.nombre || `docente-${index}`} className="border-b last:border-b-0 border-gray-200">
+                              <button
+                                type="button"
+                                className={`w-full text-left px-4 py-2 text-sm transition-colors ${isSelected ? 'bg-baseRojo font-semibold text-negro' : 'hover:bg-baseRojo'}`}
+                                role="option"
+                                aria-selected={isSelected}
+                                onClick={() => handleSelectDocente(docente)}
+                              >
+                                {`${docente.nombre || 'Docente'} - ${docente.correo || 'Sin correo'}`}
+                              </button>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    )}
+                  </div>
+                  {!isDocente && docentesDisponibles.length === 0 && (
+                    <p className="text-xs text-gray-500">No hay docentes disponibles para seleccionar.</p>
+                  )}
                 </fieldset>
 
               </div>
               <div className='w-full'>
                 <fieldset className="fieldset">
-                  <legend className="fieldset-legend text-negro text-sm">Curso - Laboratorio*</legend>
+                  <legend className="fieldset-legend text-negro text-sm">Curso*</legend>
                   <input
                     type="text"
                     name="curso"
                     value={formData.curso}
                     onChange={handleChange}
                     className="input campos"
-                    placeholder="Nombre del curso o laboratorio"
+                    placeholder="Nombre del curso"
                     required
                   />
                 </fieldset>
