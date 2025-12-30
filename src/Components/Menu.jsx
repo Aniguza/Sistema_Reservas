@@ -15,7 +15,6 @@ export const Menu = () => {
             <Link to="/" className="menuItem" onClick={handleMenuClick}>Inicio</Link>
             <Link to="/catalogo" className="menuItem" onClick={handleMenuClick}> Equipos</Link>
             <Link to="/reservas" className="menuItem" onClick={handleMenuClick}>Reservar</Link>
-            <Link to="/ayuda" className="menuItem" onClick={handleMenuClick}>Ayuda</Link>
         </>
     )
 }
