@@ -12,6 +12,7 @@ import { fetchUsuarios } from '../redux/slices/usuariosSlice';
 import { AgregarCompañeros } from '../Components/modals/AgregarCompañeros.jsx';
 import { AgregarEquipos } from '../Components/modals/AgregarEquipos.jsx';
 import { AceptarReserva } from '../Components/modals/AceptarReserva.jsx';
+import { formatTime12 } from '../utils/time';
 
 export const ReservaForm = () => {
   const dispatch = useDispatch();
@@ -112,6 +113,8 @@ export const ReservaForm = () => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
+
+  
 
   const handleCorreoChange = (e) => {
     setCorreoInput(e.target.value);
@@ -524,6 +527,9 @@ export const ReservaForm = () => {
                       className="input bg-blanco border-negro w-full"
                       required
                     />
+                    {formData.horaInicio && (
+                      <div className="text-sm text-gray-600">{formatTime12(formData.horaInicio)}</div>
+                    )}
                   </fieldset>
                   <fieldset className="fieldset w-full">
                     <legend className="fieldset-legend text-negro text-sm">Hora Fin*</legend>
@@ -535,8 +541,10 @@ export const ReservaForm = () => {
                       className="input bg-blanco border-negro w-full"
                       required
                     />
+                    {formData.horaFin && (
+                      <div className="text-sm text-gray-600">{formatTime12(formData.horaFin)}</div>
+                    )}
                   </fieldset>
-
                 </div>
                 <fieldset className="fieldset w-full">
                   <legend className="fieldset-legend text-negro text-sm">Fecha*</legend>

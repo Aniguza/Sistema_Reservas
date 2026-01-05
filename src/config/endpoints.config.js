@@ -4,7 +4,7 @@ export const API_ENDPOINTS = {
     },
     usuarios: {
         list: '/usuarios',
-        create: '/usuarios',
+        create: '/usuarios/create',
         perfil: (correo) => `/usuarios/perfil/${encodeURIComponent(correo)}`,
     },
     reservas: {
@@ -22,5 +22,8 @@ export const API_ENDPOINTS = {
     },
     aulas: {
         list: '/aulas',
+    },
+    deshabilitacion: {
+        status: '/api/deshabilitacion',
     },
 };

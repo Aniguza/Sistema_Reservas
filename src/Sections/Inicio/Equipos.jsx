@@ -11,30 +11,52 @@ export const Equipos = () => {
         const obtenerEquipos = async () => {
             setIsLoading(true);
             setError(null);
-            try {
-                const data = await equiposService.getAllEquipos();
-                const flattenArray = (payload) => {
-                    if (Array.isArray(payload)) {
-                        return payload;
-                    }
-                    if (payload && typeof payload === 'object') {
-                        for (const value of Object.values(payload)) {
-                            const nested = flattenArray(value);
-                            if (Array.isArray(nested)) {
-                                return nested;
+                try {
+                    const data = await equiposService.getAllEquipos();
+
+                    const arraysFound = [];
+
+                    const walk = (node) => {
+                        if (!node) return;
+                        if (Array.isArray(node)) {
+                            arraysFound.push(node);
+                            return;
+                        }
+                        if (typeof node === 'object') {
+                            // Detect array-like objects with numeric keys
+                            const keys = Object.keys(node);
+                            const allNumeric = keys.length > 0 && keys.every(k => /^\d+$/.test(k));
+                            if (allNumeric) {
+                                const converted = keys
+                                    .map(k => node[k])
+                                    .filter(v => v !== undefined);
+                                if (converted.length) {
+                                    arraysFound.push(converted);
+                                }
+                            }
+                            for (const value of Object.values(node)) {
+                                walk(value);
                             }
                         }
-                    }
-                    return null;
-                };
+                    };
 
-                const parsed = flattenArray(data);
-                if (parsed) {
-                    setEquipos(parsed);
-                } else {
-                    console.warn('Formato de respuesta inesperado para equipos:', data);
-                    setEquipos([]);
-                }
+
+                    walk(data);
+                    console.debug('equipos - respuesta raw:', data, 'arraysFound:', arraysFound);
+
+                    let parsed = null;
+                    if (arraysFound.length > 0) {
+                        // Prefer the longest array found
+                        parsed = arraysFound.reduce((a, b) => (a.length >= b.length ? a : b), arraysFound[0]);
+                    }
+
+                    if (parsed && parsed.length > 0) {
+                        console.debug('equipos - parsed array length:', parsed.length);
+                        setEquipos(parsed);
+                    } else {
+                        console.warn('Respuesta de equipos sin arrays detectables:', data);
+                        setEquipos([]);
+                    }
             } catch (err) {
                 console.error('Error obteniendo equipos:', err);
                 setError('No se pudieron cargar los equipos en este momento.');
@@ -47,23 +69,24 @@ export const Equipos = () => {
         obtenerEquipos();
     }, []);
 
-    const equiposRandom = useMemo(() => {
-        if (!equipos || equipos.length === 0) {
-            return [];
-        }
+    const [equiposRandom, setEquiposRandom] = useState([]);
 
-        if (equipos.length <= 3) {
-            return [...equipos];
-        }
-
-        const copiado = [...equipos];
+    const pickRandomEquipos = (list, count = 3) => {
+        if (!Array.isArray(list) || list.length === 0) return [];
+        if (list.length <= count) return [...list];
+        const copiado = [...list];
         for (let i = copiado.length - 1; i > 0; i -= 1) {
             const j = Math.floor(Math.random() * (i + 1));
             const temp = copiado[i];
             copiado[i] = copiado[j];
             copiado[j] = temp;
         }
-        return copiado.slice(0, 3);
+        return copiado.slice(0, count);
+    };
+
+    // Genera selección aleatoria al montar y cuando cambian los equipos
+    useEffect(() => {
+        setEquiposRandom(pickRandomEquipos(equipos, 3));
     }, [equipos]);
 
     return (
@@ -77,9 +100,9 @@ export const Equipos = () => {
             )}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 justify-items-center">
                 {equiposRandom.length === 0 ? (
-                    <p className="col-span-full text-gray-500">No hay equipos disponibles en este momento.</p>
-                ) : equiposRandom.map((equipo) => (
-                    <div key={equipo._id || equipo.id} className="card w-96 ">
+                    <p className="col-span-full text-gray-500">No hay equipos disponibles en este momento. Revisa la consola para más detalles.</p>
+                ) : equiposRandom.map((equipo, idx) => (
+                    <div key={equipo._id || equipo.id || equipo.nombre || idx} className="card w-96 ">
                         <figure className="px-10 pt-10">
                             <OptimizedImage
                                 src={equipo.imagen}

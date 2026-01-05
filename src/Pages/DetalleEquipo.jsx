@@ -3,22 +3,23 @@ import { Link, useParams, useNavigate } from 'react-router'
 import { useSelector } from 'react-redux'
 import { CalendarioDisponibilidad } from '../Components/CalendarioDisponibilidad'
 import { reservasService } from '../services/reservasService'
+import { formatTime12, formatISODateSafe } from '../utils/time'
 
 export const DetalleEquipo = () => {
     const { id } = useParams(); // Obtener el ID de la URL
     const navigate = useNavigate();
-    
+
     // Obtener datos de Redux
     const { items: equipos } = useSelector(state => state.equipos);
     const { items: aulas } = useSelector(state => state.aulas);
-    
+
     // Determinar el tipo basado en la URL actual
     const currentPath = window.location.pathname;
     const isAula = currentPath.includes('/aula/');
-    
+
     // Buscar el recurso según el tipo determinado por la URL
     let recurso, tipoRecurso;
-    
+
     if (isAula) {
         recurso = aulas.find(au => au._id === id);
         tipoRecurso = 'Aula';
@@ -26,7 +27,7 @@ export const DetalleEquipo = () => {
         recurso = equipos.find(eq => eq._id === id);
         tipoRecurso = 'Equipo';
     }
-    
+
     const [reservasEquipo, setReservasEquipo] = useState([]);
     const [estadisticas, setEstadisticas] = useState({
         total: 0,
@@ -35,7 +36,7 @@ export const DetalleEquipo = () => {
         porcentajeOcupacion: 0
     });
     const [selectedDate, setSelectedDate] = useState({});
-    
+
     useEffect(() => {
         if (!id) return;
 
@@ -90,10 +91,13 @@ export const DetalleEquipo = () => {
         });
     }, [recurso, id, reservasEquipo]);
 
-    const handleDateSelect = (fecha, reserva) => {
-        setSelectedDate({ fecha, reserva });
-        console.log('Fecha seleccionada:', fecha, 'Reserva:', reserva);
+    const handleDateSelect = (fecha, reservas) => {
+        // reservas puede ser null o un array de reservas para ese día
+        setSelectedDate({ fecha, reservas: reservas || [] });
+        console.log('Fecha seleccionada:', fecha, 'Reservas:', reservas);
     };
+
+    
 
     const handleReserva = () => {
         // Redirigir al formulario de reserva
@@ -126,16 +130,16 @@ export const DetalleEquipo = () => {
             </div>
             <div className='mt-4'>
                 <h1 className='titulos'>{recurso.name || recurso.nombre}</h1>
-                
+
                 <div className="tabs tabs-border text-negro">
                     <input type="radio" name="my_tabs_2" className="tab text-negro px-2" aria-label="Descripción" defaultChecked />
                     <div className="tab-content p-2 mt-2 md:p-10">
                         <h3 className="subtitulos">Descripción del {tipoRecurso}</h3>
-                        <div 
+                        <div
                             className="parrafos prose  max-w-none"
                             dangerouslySetInnerHTML={{ __html: recurso.description || recurso.descripcion || 'Sin descripción disponible' }}
                         />
-                        
+
                         {/* Información básica para ambos tipos */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
                             <div>
@@ -152,17 +156,16 @@ export const DetalleEquipo = () => {
                                         <li><strong>Código:</strong> {recurso.codigo}</li>
                                     )}
                                     {tipoRecurso === 'Equipo' && (
-                                        <li><strong>Estado:</strong> 
-                                            <span className={`ml-2 px-2 py-1 rounded-full text-xs font-semibold ${
-                                                recurso.disponibilidad === 'disponible' ? 'bg-green-100 text-green-800' :
-                                                recurso.disponibilidad === 'ocupado' ? 'bg-red-100 text-red-800' :
-                                                recurso.disponibilidad === 'en mantenimiento' ? 'bg-yellow-100 text-yellow-800' :
-                                                'bg-gray-100 text-gray-800'
-                                            }`}>
+                                        <li><strong>Estado:</strong>
+                                            <span className={`ml-2 px-2 py-1 rounded-full text-xs font-semibold ${recurso.disponibilidad === 'disponible' ? 'bg-green-100 text-green-800' :
+                                                    recurso.disponibilidad === 'ocupado' ? 'bg-red-100 text-red-800' :
+                                                        recurso.disponibilidad === 'en mantenimiento' ? 'bg-yellow-100 text-yellow-800' :
+                                                            'bg-gray-100 text-gray-800'
+                                                }`}>
                                                 {recurso.disponibilidad === 'disponible' ? 'Disponible' :
-                                                 recurso.disponibilidad === 'ocupado' ? 'Ocupado' :
-                                                 recurso.disponibilidad === 'en mantenimiento' ? 'En mantenimiento' :
-                                                 'No disponible'}
+                                                    recurso.disponibilidad === 'ocupado' ? 'Ocupado' :
+                                                        recurso.disponibilidad === 'en mantenimiento' ? 'En mantenimiento' :
+                                                            'No disponible'}
                                             </span>
                                         </li>
                                     )}
@@ -199,7 +202,7 @@ export const DetalleEquipo = () => {
                             <input type="radio" name="my_tabs_2" className="tab text-negro px-2" aria-label="Especificaciones" />
                             <div className="tab-content p-2 mt-2 md:p-10">
                                 <h3 className="subtitulos">Especificaciones Técnicas</h3>
-                                
+
                                 {recurso.brand ? (
                                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                         <div className="bg-baseGris p-4 rounded-lg">
@@ -211,7 +214,7 @@ export const DetalleEquipo = () => {
                                                 <li><strong>Estado:</strong> {recurso.disponibilidad || 'N/A'}</li>
                                             </ul>
                                         </div>
-                                        
+
                                         <div className="bg-baseGris p-4 rounded-lg">
                                             <h4 className="font-semibold mb-3 text-primario">Características</h4>
                                             <ul className="space-y-1 text-sm">
@@ -220,7 +223,7 @@ export const DetalleEquipo = () => {
                                                 <li><strong>Certificación:</strong> Verificado</li>
                                             </ul>
                                         </div>
-                                        
+
                                         <div className="bg-baseGris p-4 rounded-lg">
                                             <h4 className="font-semibold mb-3 text-primario">Condiciones</h4>
                                             <ul className="space-y-1 text-sm">
@@ -235,7 +238,7 @@ export const DetalleEquipo = () => {
                                         <p className="text-gray-500">No hay especificaciones técnicas disponibles para este equipo.</p>
                                     </div>
                                 )}
-                                
+
                                 <div className="mt-6 bg-baseGris p-4 rounded-lg">
                                     <h4 className="font-semibold mb-3 text-primario">Notas Importantes</h4>
                                     <div className="text-sm text-gray-700 space-y-2">
@@ -252,7 +255,7 @@ export const DetalleEquipo = () => {
                     <input type="radio" name="my_tabs_2" className="tab text-negro px-2" aria-label="Disponibilidad" />
                     <div className="tab-content mt-2 md:p-10">
                         <h3 className="subtitulos">Calendario de Disponibilidad</h3>
-                        
+
                         {/* Estadísticas de reservas */}
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6" >
                             <div className="bg-blue-50 p-4 rounded-lg text-center">
@@ -272,22 +275,48 @@ export const DetalleEquipo = () => {
                                 <div className="text-sm text-gray-800">Ocupación</div>
                             </div>
                         </div>
-                        
+
                         <p className="parrafos text-sm text-gray-600 mb-6">
-                            Selecciona las fechas para ver la disponibilidad {tipoRecurso === 'Equipo' ? 'del equipo' : 'del aula'}. 
-                            Las fechas en <span className="text-green-600 font-semibold">verde</span> están disponibles, 
+                            Selecciona las fechas para ver la disponibilidad {tipoRecurso === 'Equipo' ? 'del equipo' : 'del aula'}.
+                            Las fechas en <span className="text-green-600 font-semibold">verde</span> están disponibles,
                             las fechas en <span className="text-red-600 font-semibold">rojo</span> están ocupadas.
-                            
+
                         </p>
-                        
+
                         <CalendarioDisponibilidad
                             resourceId={id}
                             resourceType={isAula ? 'aula' : 'equipo'}
                             reservations={reservasEquipo}
+                            occupiedRanges={recurso.occupiedRanges || []}
                             onDateSelect={handleDateSelect}
                             onReserva={handleReserva}
                         />
-                        
+
+                        {/* Detalle de horarios si la fecha seleccionada tiene reservas/ocupaciones */}
+                        {selectedDate && Array.isArray(selectedDate.reservas) && selectedDate.reservas.length > 0 && (
+                            <div className="w-full flex justify-center">
+                                <div className="mt-4 p-4 bg-baseGris rounded-lg w-100 justify-center">
+                                    <h4 className="font-semibold mb-2">Horarios para {formatISODateSafe(selectedDate.fecha)}</h4>
+                                    <ul className="text-sm text-gray-700 space-y-1">
+                                        {selectedDate.reservas.map((r, idx) => {
+                                            // intentar obtener horas desde diferentes propiedades
+                                            const start = r.horaInicio || r.raw?.start || r.raw?.horaInicio;
+                                            const end = r.horaFin || r.raw?.end || r.raw?.horaFin;
+                                            const startLabel = start ? formatTime12(start) : '';
+                                            const endLabel = end ? formatTime12(end) : '';
+
+                                            return (
+                                                <li key={idx} className="flex justify-between">
+                                                    <span>{r.motivo || 'Ocupación'}</span>
+                                                    <span className="font-mono">{startLabel} — {endLabel}</span>
+                                                </li>
+                                            );
+                                        })}
+                                    </ul>
+                                </div>
+                            </div>
+                        )}
+
                         {/* Información adicional */}
                         <div className="mt-6 p-4 bg-blue-50 rounded-lg">
                             <h4 className="font-semibold mb-2 text-blue-800">Información importante:</h4>
