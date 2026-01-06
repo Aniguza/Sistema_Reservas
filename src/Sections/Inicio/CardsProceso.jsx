@@ -26,16 +26,16 @@ export const CardsProceso = () => {
     ];
 
     return (
-    <div className="p-10 text-center">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 justify-items-center w-[80%] mx-auto">
+    <div className="p-4 sm:p-6 md:p-8 lg:p-10 text-center">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 justify-items-center w-full max-w-6xl mx-auto">
                 {equipos.map((equipo) => (
-                    <div key={equipo.id} className="flex flex-col items-center card w-80 bg-[#f4f2f0] rounded-[15px] p-5 ">
-                        <figure className="max-w-fit bg-gray-300 p-4 rounded-full mt-3">
-                            {equipo.icon && <equipo.icon className="w-10 h-10 mx-auto text-primario " />}
+                    <div key={equipo.id} className="flex flex-col items-center card w-full max-w-sm sm:max-w-md lg:max-w-80 bg-[#f4f2f0] rounded-[15px] p-4 sm:p-5 shadow-md">
+                        <figure className="max-w-fit bg-gray-300 p-3 sm:p-4 rounded-full mt-3">
+                            {equipo.icon && <equipo.icon className="w-8 h-8 sm:w-10 sm:h-10 mx-auto text-primario " />}
                         </figure>
-                        <div className="card-body items-center text-center">
-                            <h2 className="card-title">{equipo.nombre}</h2>
-                            <p>{equipo.descripcion}</p>
+                        <div className="card-body items-center text-center p-4">
+                            <h2 className="card-title text-lg sm:text-xl">{equipo.nombre}</h2>
+                            <p className="text-sm sm:text-base">{equipo.descripcion}</p>
                         </div>
                     </div>
                 ))}

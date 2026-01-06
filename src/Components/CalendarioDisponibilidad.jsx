@@ -27,6 +27,7 @@ const normalizeReservation = (reserva = {}) => {
 
 export const CalendarioDisponibilidad = ({
   reservations: reservationsData = [],
+  occupiedRanges = [],
   onDateSelect = () => {},
 }) => {
   const todayISO = useMemo(() => toISODate(new Date()), []);
@@ -39,13 +40,43 @@ export const CalendarioDisponibilidad = ({
 
   const reservationsMap = useMemo(() => {
     if (!Array.isArray(reservationsData)) return {};
-    return reservationsData.reduce((acc, reserva) => {
-      if (!reserva || !reserva.fecha) return acc;
+    const acc = reservationsData.reduce((map, reserva) => {
+      if (!reserva || !reserva.fecha) return map;
       const iso = toISODate(new Date(reserva.fecha));
-      acc[iso] = normalizeReservation(reserva);
-      return acc;
+      const norm = normalizeReservation(reserva);
+      if (!map[iso]) map[iso] = [];
+      map[iso].push(norm);
+      return map;
     }, {});
-  }, [reservationsData]);
+
+    // Map occupiedRanges (from aulas) into per-day occupied entries
+    if (Array.isArray(occupiedRanges)) {
+      occupiedRanges.forEach((range) => {
+        if (!range || !range.start || !range.end) return;
+        let start = new Date(range.start);
+        const end = new Date(range.end);
+
+        // iterate day-by-day (inclusive)
+        while (start <= end) {
+          const iso = toISODate(start);
+          const norm = {
+            estado: 'occupied',
+            usuario: null,
+            correo: null,
+            horaInicio: range.start,
+            horaFin: range.end,
+            motivo: range.reason || range.motivo || 'Ocupación programada',
+            raw: range,
+          };
+          if (!acc[iso]) acc[iso] = [];
+          acc[iso].push(norm);
+          start = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 1);
+        }
+      });
+    }
+
+    return acc;
+  }, [reservationsData, occupiedRanges]);
 
   const calendarMonths = useMemo(() => {
     return monthDates.map((monthDate) => {
@@ -63,15 +94,15 @@ export const CalendarioDisponibilidad = ({
         const iso = toISODate(date);
         const isCurrentMonth = date.getMonth() === reference.getMonth();
         const isPast = iso < todayISO;
-        const reservation = reservationsMap[iso];
-        const estado = reservation?.estado || 'available';
+        const reservations = reservationsMap[iso];
+        const estado = Array.isArray(reservations) && reservations.some((r) => r.estado === 'occupied') ? 'occupied' : 'available';
 
         days.push({
           iso,
           date,
           isCurrentMonth,
           isPast,
-          reservation,
+          reservation: reservations,
           estado,
         });
       }
@@ -149,7 +180,7 @@ export const CalendarioDisponibilidad = ({
 
                 {month.days.map((day) => {
                   const isSelected = day.iso === selectedDate;
-                  const hasReservation = Boolean(day.reservation);
+                  const hasReservation = Array.isArray(day.reservation) && day.reservation.length > 0;
                   const dayClasses = [
                     'calendar-day',
                     day.isCurrentMonth ? '' : 'calendar-day--muted',

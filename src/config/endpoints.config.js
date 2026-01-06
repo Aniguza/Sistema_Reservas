@@ -23,4 +23,7 @@ export const API_ENDPOINTS = {
     aulas: {
         list: '/aulas',
     },
+    deshabilitacion: {
+        status: '/api/deshabilitacion',
+    },
 };

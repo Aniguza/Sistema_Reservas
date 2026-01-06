@@ -26,19 +26,21 @@ export const Header = () => {
                             <GiHamburgerMenu className="h-5 w-5" />
                         </label>
                     </div>
-                     <div className="drawer lg:drawer-open" tabIndex="-1">
+                    <div className="drawer lg:drawer-open" tabIndex="-1">
                         <input id="my-drawer-3" type="checkbox" className="drawer-toggle" />
-                        
+
                         <div className="drawer-side">
                             <label htmlFor="my-drawer-3" aria-label="close sidebar" className="drawer-overlay"></label>
                             <ul className="menu bg-base-200 min-h-full w-80 p-4 ">
                                 {/* Sidebar content here */}
-                                <Menu/>
+                                <Menu />
                             </ul>
                         </div>
-                    </div> 
+                    </div>
                 </div>
-                <Link to="/" className="btn btn-ghost text-xl">UTP+ Lab</Link>
+                <div className='w-50'>
+                    <Link to="/" className="btn btn-ghost text-xl"> <img src="https://res.cloudinary.com/dtmuza6iw/image/upload/v1767589197/lab_htncpr.jpg" width="fill" alt="Logo" /></Link>
+                </div>
             </div>
             <div className="navbar-center hidden lg:flex">
                 <div className="menu menu-horizontal px-1 flex gap-10">
@@ -51,12 +53,12 @@ export const Header = () => {
                         <div className="flex gap-2">
                             <div className="dropdown dropdown-end">
                                 <div tabIndex={0} role="button" className="btn btn-ghost btn-circle avatar">
-                                        {/* // primera letra y primera letra del nombre y apellido */}
-                                        <span className="text-xl font-bold">{(() => {
-                                            const user = JSON.parse(localStorage.getItem('user') || '{}');
-                                            if (user.correo) return user.correo.charAt(0).toUpperCase();
-                                            return 'U';
-                                        })()}</span>
+                                    {/* // primera letra y primera letra del nombre y apellido */}
+                                    <span className="text-xl font-bold">{(() => {
+                                        const user = JSON.parse(localStorage.getItem('user') || '{}');
+                                        if (user.correo) return user.correo.charAt(0).toUpperCase();
+                                        return 'U';
+                                    })()}</span>
 
                                 </div>
                                 <ul
