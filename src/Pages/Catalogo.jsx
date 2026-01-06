@@ -156,46 +156,42 @@ export const Catalogo = () => {
 
 
     return (
-        <section className='max-w-[1400px] w-full px-5 font-lato'>
-            <div className='w-full'>
-                <p className='titulos'>Catálogo de Recursos</p>
-                <p className='parrafos'>Encuentra y reserva las aulas y equipos que necesitas para tus proyectos y clases.</p>
+        <section className='max-w-[1400px] w-full px-3 sm:px-4 md:px-5 font-lato'>
+            <div className='w-full mb-4 sm:mb-6'>
+                <p className='titulos text-xl sm:text-2xl md:text-3xl'>Catálogo de Recursos</p>
+                <p className='parrafos text-sm sm:text-base'>Encuentra y reserva las aulas y equipos que necesitas para tus proyectos y clases.</p>
             </div>
-            <div className='grid grid-cols-[1fr_auto] gap-3'>
-                <label className="input bg-blanco border border-negro w-full">
+            <div className='grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3'>
+                <label className="input bg-blanco border border-negro w-full mb-2 sm:mb-0">
                     <FaSearch className="icon text-primario w-4 h-4" />
-                    <input type="search" required placeholder="Busca aulas y equipos por nombre, ubicación, marca..." className='w-full bg-white' value={busqueda} onChange={handleSearch}
+                    <input type="search" required placeholder="Busca aulas y equipos por nombre, ubicación, marca..." className='w-full bg-white text-sm sm:text-base' value={busqueda} onChange={handleSearch}
                     />
                 </label>
-                <button className="btn text-negro bg-blanco  border border-negro shadow-none">
-                    <IoFilterSharp className="icon text-primario w-4 h-4" />
-                    Filtros
-                </button>
             </div>
-            <div className='flex gap-3 mt-2'>
+            <div className='flex flex-wrap gap-2 sm:gap-3 mt-2'>
                 <select
                     value={filtroTipo}
                     onChange={(e) => setFiltroTipo(e.target.value)}
-                    className="select"
+                    className="select text-sm sm:text-base flex-1 min-w-[150px]"
                 >
                     <option value="Todos">Todos los recursos</option>
                     <option value="Aula">Solo Aulas</option>
                     <option value="Equipo">Solo Equipos</option>
                 </select>
-                <select value={filtroCategoria} onChange={(e) => setFiltroCategoria(e.target.value)} className="select">
+                <select value={filtroCategoria} onChange={(e) => setFiltroCategoria(e.target.value)} className="select text-sm sm:text-base flex-1 min-w-[150px]">
                     <option value="Todos">Categoría</option>
                     <option value="electronicos">Electrónicos</option>
                     <option value="herramientas">Herramientas</option>
                     <option value="tecnologicos">Tecnológicos</option>
                 </select>
-                <select value={filtroDisponibilidad} onChange={(e) => setFiltroDisponibilidad(e.target.value)} className="select ">
+                <select value={filtroDisponibilidad} onChange={(e) => setFiltroDisponibilidad(e.target.value)} className="select text-sm sm:text-base flex-1 min-w-[150px]">
                     <option value="Todos">Disponibilidad</option>
                     <option value="disponible">Disponible</option>
                     <option value="ocupado">Ocupado</option>
                     <option value="no disponible">No disponible</option>
                     <option value="en mantenimiento">En mantenimiento</option>
                 </select>
-                <select value={filtroUbicacion} onChange={(e) => setFiltroUbicacion(e.target.value)} className="select ">
+                <select value={filtroUbicacion} onChange={(e) => setFiltroUbicacion(e.target.value)} className="select text-sm sm:text-base flex-1 min-w-[150px]">
                     <option value="Todos">Ubicación</option>
                     {aulas.map((aula) => (
                         <option key={aula._id} value={aula.codigo}>
@@ -208,7 +204,7 @@ export const Catalogo = () => {
 
             {/* Contador de resultados */}
             <div className="mt-4 mb-2">
-                <p className="text-sm text-gray-600">
+                <p className="text-xs sm:text-sm text-gray-600">
                     {busqueda.trim() ? (
                         <>Mostrando {recursosFiltrados.length} resultado{recursosFiltrados.length !== 1 ? 's' : ''} para "{busqueda}"</>
                     ) : (
@@ -219,11 +215,11 @@ export const Catalogo = () => {
 
 
 
-            <div className='mt-5 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6 mb-10'>
+            <div className='mt-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 sm:gap-6 mb-6 sm:mb-10'>
                 {recursosFiltrados.length > 0 ? (
                     recursosFiltrados.map((recurso, index) => (
                         <div
-                            className="card bg-baseGris w-full max-w-60 shadow-sm cursor-pointer transform transition-all duration-300 hover:scale-105 hover:shadow-lg hover:bg-white border-2 border-transparent hover:border-primario group"
+                            className="card bg-baseGris w-full max-w-full sm:max-w-60 shadow-sm cursor-pointer transform transition-all duration-300 hover:scale-105 hover:shadow-lg hover:bg-white border-2 border-transparent hover:border-primario group"
                             key={recurso._id || index}
                             onClick={() => handleCardClick({ ...recurso, id: recurso._id })}
                             role="button"
@@ -239,7 +235,7 @@ export const Catalogo = () => {
                                 <OptimizedImage
                                     src={recurso.imageUrl || foto}
                                     alt={recurso.name}
-                                    className="w-full h-48 object-cover "
+                                    className="w-full h-40 sm:h-48 object-cover "
                                 />
 
                                 {/* Indicador de tipo */}
@@ -272,12 +268,12 @@ export const Catalogo = () => {
                                     </div>
                                 )}
                             </figure>
-                            <div className="card-body p-4">
-                                <h2 className="card-title text-lg group-hover:text-primario transition-colors duration-300">
+                            <div className="card-body p-3 sm:p-4">
+                                <h2 className="card-title text-base sm:text-lg group-hover:text-primario transition-colors duration-300">
                                     {recurso.name}
                                 </h2>
                                 <div 
-                                    className="text-gray-600 text-sm line-clamp-2 prose prose-sm max-w-none"
+                                    className="text-gray-600 text-xs sm:text-sm line-clamp-2 prose prose-sm max-w-none"
                                     dangerouslySetInnerHTML={{ __html: recurso.description || 'Sin descripción' }}
                                 />
 
@@ -294,7 +290,7 @@ export const Catalogo = () => {
                                     )}
                                 </div>
                                 <div className="card-actions justify-end mt-3">
-                                    <button className="btn btn-sm bg-primario text-white border-none hover:bg-red-700 transition-colors duration-300">
+                                    <button className="btn btn-sm bg-primario text-white border-none hover:bg-red-700 transition-colors duration-300 text-xs sm:text-sm">
                                         Ver Detalles
                                     </button>
                                 </div>

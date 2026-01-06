@@ -345,7 +345,7 @@ export const ReservaForm = () => {
   return (
     isLoggedIn ? (
       <section className='max-w-[1000px] w-full lg:px-5 font-lato p-4'>
-        <h1 className='titulos !text-3xl'>Reservar equipo</h1>
+        <h1 className='titulos !text-3xl'>Reservar</h1>
 
         <div className="">
           <form onSubmit={handleSubmit} className="flex flex-col items-center">
