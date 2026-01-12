@@ -2,6 +2,7 @@ import React from 'react'
 import { Link, useNavigate } from 'react-router'
 import { Menu } from './Menu.jsx';
 import { GiHamburgerMenu } from "react-icons/gi";
+import { useDispatch, useSelector } from 'react-redux';
 
 
 export const Header = () => {
@@ -14,10 +15,11 @@ export const Header = () => {
         window.location.reload(); // Para actualizar el estado del header
     };
 
+    const { user: usuarioActual, isLoading } = useSelector(state => state.auth);
     const isLoggedIn = !!localStorage.getItem('access_token');
 
     return (
-        <div className="navbar text-negro font-lato">
+        <div className="flex navbar text-negro font-lato max-w-[1400px] justify-center mx-auto">
             <div className="navbar-start">
                 <div className="dropdown lg:hidden">
                     <div className="drawer-content flex flex-col items-center justify-center">
@@ -64,6 +66,9 @@ export const Header = () => {
                                 <ul
                                     tabIndex="-1"
                                     className="menu menu-sm dropdown-content bg-base-100 rounded-box z-1 mt-3 w-52 p-2 shadow">
+                                        <li className='p-3 justify-start border-none hover:bg-[#fff]'>
+                                            Hola {usuarioActual ? ((usuarioActual.nombre || usuarioActual.name || 'Usuario').split(' ')[0]) : 'Usuario'}
+                                        </li>
                                     <li>
                                         <Link
                                             to='/perfil'

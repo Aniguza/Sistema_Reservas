@@ -172,26 +172,26 @@ export const Catalogo = () => {
                 <select
                     value={filtroTipo}
                     onChange={(e) => setFiltroTipo(e.target.value)}
-                    className="select text-sm sm:text-base flex-1 min-w-[150px]"
+                    className="select text-sm sm:text-base flex-1 min-w-[150px] md:min-w-0 md:flex-none"
                 >
                     <option value="Todos">Todos los recursos</option>
                     <option value="Aula">Solo Aulas</option>
                     <option value="Equipo">Solo Equipos</option>
                 </select>
-                <select value={filtroCategoria} onChange={(e) => setFiltroCategoria(e.target.value)} className="select text-sm sm:text-base flex-1 min-w-[150px]">
+                <select value={filtroCategoria} onChange={(e) => setFiltroCategoria(e.target.value)} className="select text-sm sm:text-base flex-1 min-w-[150px] md:min-w-0 md:flex-none">
                     <option value="Todos">Categoría</option>
                     <option value="electronicos">Electrónicos</option>
                     <option value="herramientas">Herramientas</option>
                     <option value="tecnologicos">Tecnológicos</option>
                 </select>
-                <select value={filtroDisponibilidad} onChange={(e) => setFiltroDisponibilidad(e.target.value)} className="select text-sm sm:text-base flex-1 min-w-[150px]">
+                <select value={filtroDisponibilidad} onChange={(e) => setFiltroDisponibilidad(e.target.value)} className="select text-sm sm:text-base flex-1 min-w-[150px] md:min-w-0 md:flex-none">
                     <option value="Todos">Disponibilidad</option>
                     <option value="disponible">Disponible</option>
                     <option value="ocupado">Ocupado</option>
                     <option value="no disponible">No disponible</option>
                     <option value="en mantenimiento">En mantenimiento</option>
                 </select>
-                <select value={filtroUbicacion} onChange={(e) => setFiltroUbicacion(e.target.value)} className="select text-sm sm:text-base flex-1 min-w-[150px]">
+                <select value={filtroUbicacion} onChange={(e) => setFiltroUbicacion(e.target.value)} className="select text-sm sm:text-base flex-1 min-w-[150px] md:min-w-0 md:flex-none">
                     <option value="Todos">Ubicación</option>
                     {aulas.map((aula) => (
                         <option key={aula._id} value={aula.codigo}>
@@ -215,7 +215,7 @@ export const Catalogo = () => {
 
 
 
-            <div className='mt-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 sm:gap-6 mb-6 sm:mb-10'>
+            <div className='mx-10 mt-5 grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 sm:gap-8 mb-6 sm:mb-10'>
                 {recursosFiltrados.length > 0 ? (
                     recursosFiltrados.map((recurso, index) => (
                         <div

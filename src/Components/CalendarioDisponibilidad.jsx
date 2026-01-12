@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import '../assets/css/calendar.css';
 
 const WEEKDAY_LABELS = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
@@ -118,10 +118,15 @@ export const CalendarioDisponibilidad = ({
     });
   }, [monthDates, reservationsMap, todayISO]);
 
+  // Memoizar las reservas para la fecha seleccionada
+  const selectedDateReservations = useMemo(() => {
+    return selectedDate ? reservationsMap[selectedDate] || null : null;
+  }, [selectedDate, reservationsMap]);
+
   useEffect(() => {
     if (!selectedDate) return;
-    onDateSelect(selectedDate, reservationsMap[selectedDate] || null);
-  }, [selectedDate, reservationsMap, onDateSelect]);
+    onDateSelect(selectedDate, selectedDateReservations);
+  }, [selectedDate, selectedDateReservations, onDateSelect]);
 
   const handleMonthChange = (delta) => {
     setCurrentMonth((prev) => addMonths(prev, delta));
