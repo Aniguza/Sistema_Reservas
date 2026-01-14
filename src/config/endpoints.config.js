@@ -27,4 +27,8 @@ export const API_ENDPOINTS = {
     deshabilitacion: {
         status: '/api/deshabilitacion',
     },
+    analytics: {
+        tiempoFormulario: '/analytics/tiempo-formulario',
+        estadisticasTiempoFormulario: '/analytics/tiempo-formulario/stats',
+    },
 };

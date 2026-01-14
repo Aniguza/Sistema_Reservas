@@ -23,6 +23,11 @@ export const AceptarReserva = forwardRef((props, ref) => {
             document.getElementById("confirm").classList.add("hidden");
         }
 
+        // Registrar tiempo final cuando se hace clic en "Reservar"
+        if (props.onTimeRegister) {
+            props.onTimeRegister();
+        }
+
         try {
             setIsLoading(true);
             if (props.onConfirm) {

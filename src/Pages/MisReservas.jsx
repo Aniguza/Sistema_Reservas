@@ -270,6 +270,7 @@ export const MisReservas = () => {
                                 {/* Información básica */}
                                 <div className="bg-base-200 p-4 rounded-lg space-y-2">
                                     <h4 className="font-semibold mb-2">Información General</h4>
+                                    <p  className="text-sm"><strong>Código:</strong> {reservaSeleccionada.codigo}</p>
                                     <p className="text-sm"><strong>Motivo:</strong> {
                                         (() => {
                                             let motivo = reservaSeleccionada.motivo || 'Sin especificar';
