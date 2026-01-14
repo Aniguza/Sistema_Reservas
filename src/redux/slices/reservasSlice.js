@@ -90,6 +90,29 @@ export const updateReserva = createAsyncThunk(
     }
 );
 
+// Async thunk para cancelar una reserva
+export const cancelarReserva = createAsyncThunk(
+    'reservas/cancelar',
+    async ({ id, motivo, isAdmin = false, correoUsuario }, { rejectWithValue }) => {
+        try {
+            const response = await fetch(buildUrl(API_ENDPOINTS.reservas.cancelar(id)), {
+                method: 'PATCH',
+                headers: withAuthHeaders(),
+                body: JSON.stringify({ motivo, isAdmin, correoUsuario }),
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                return rejectWithValue(errorData.message || 'Error al cancelar la reserva');
+            }
+
+            return await response.json();
+        } catch (error) {
+            return rejectWithValue(error.message);
+        }
+    }
+);
+
 // Async thunk para eliminar una reserva
 export const deleteReserva = createAsyncThunk(
     'reservas/delete',
@@ -193,6 +216,25 @@ const reservasSlice = createSlice({
                 state.error = null;
             })
             .addCase(updateReserva.rejected, (state, action) => {
+                state.isLoading = false;
+                state.error = action.payload;
+            })
+            // Cancelar reserva
+            .addCase(cancelarReserva.pending, (state) => {
+                state.isLoading = true;
+                state.error = null;
+            })
+            .addCase(cancelarReserva.fulfilled, (state, action) => {
+                state.isLoading = false;
+                // Actualizar la reserva en la lista de usuario
+                const index = state.userReservas.findIndex(reserva => reserva._id === action.payload.reserva._id);
+                if (index !== -1) {
+                    state.userReservas[index] = action.payload.reserva;
+                }
+                state.error = null;
+                state.success = true;
+            })
+            .addCase(cancelarReserva.rejected, (state, action) => {
                 state.isLoading = false;
                 state.error = action.payload;
             })

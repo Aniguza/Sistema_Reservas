@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router';
 import { useDispatch, useSelector } from 'react-redux';
-import { fetchReservasByUser } from '../redux/slices/reservasSlice';
+import { fetchReservasByUser, cancelarReserva } from '../redux/slices/reservasSlice';
 import { useToast } from '../Context/ToastContext';
-import { FaEye, FaExclamationTriangle, FaHistory } from 'react-icons/fa';
+import { FaEye, FaExclamationTriangle, FaHistory, FaTimes } from 'react-icons/fa';
 
 export const MisReservas = () => {
     const dispatch = useDispatch();
@@ -11,7 +11,10 @@ export const MisReservas = () => {
     const { userReservas: reservas, isLoading } = useSelector(state => state.reservas);
     const [filtroEstado, setFiltroEstado] = useState('Todas');
     const [reservaSeleccionada, setReservaSeleccionada] = useState(null);
+    const [reservaACancelar, setReservaACancelar] = useState(null);
+    const [motivoCancelacion, setMotivoCancelacion] = useState('');
     const detalleModalRef = useRef(null);
+    const cancelarModalRef = useRef(null);
 
     useEffect(() => {
         const user = JSON.parse(localStorage.getItem('user') || '{}');
@@ -65,6 +68,53 @@ export const MisReservas = () => {
     const abrirDetalles = (reserva) => {
         setReservaSeleccionada(reserva);
         detalleModalRef.current?.showModal();
+    };
+
+    // Verificar si el usuario puede cancelar reservas (solo alumnos, docentes y administradores)
+    const puedeCancelarReservas = () => {
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        const rol = (user.rol || user.role || '').toLowerCase();
+        return ['alumno', 'docente', 'administrador'].includes(rol);
+    };
+
+    // Verificar si una reserva puede ser cancelada (solo si no está ya cancelada, cerrada o cerrada con incidencia)
+    const puedeCancelarReserva = (reserva) => {
+        return reserva.estado !== 'cancelada' && reserva.estado !== 'cerrada' && reserva.estado !== 'cerrada_con_incidencia';
+    };
+
+    const abrirModalCancelar = (reserva) => {
+        setReservaACancelar(reserva);
+        setMotivoCancelacion('');
+        cancelarModalRef.current?.showModal();
+    };
+
+    const confirmarCancelacion = async () => {
+        if (!reservaACancelar || !motivoCancelacion.trim()) {
+            showToast('Por favor ingrese un motivo para la cancelación', 'error');
+            return;
+        }
+
+        try {
+            const user = JSON.parse(localStorage.getItem('user') || '{}');
+            const rol = (user.rol || user.role || '').toLowerCase();
+            const isAdmin = rol === 'administrador';
+
+            await dispatch(cancelarReserva({
+                id: reservaACancelar._id,
+                motivo: motivoCancelacion.trim(),
+                isAdmin,
+                correoUsuario: user.correo
+            }));
+
+            showToast('Reserva cancelada exitosamente', 'success');
+            cancelarModalRef.current?.close();
+
+            // Recargar las reservas del usuario
+            dispatch(fetchReservasByUser(user.correo));
+
+        } catch (error) {
+            showToast('Error al cancelar la reserva', 'error');
+        }
     };
 
     const isLoggedIn = !!localStorage.getItem('access_token');
@@ -168,14 +218,28 @@ export const MisReservas = () => {
                                         </div>
                                     </div>
 
-                                    {/* Botón para ver detalles */}
-                                    <button
-                                        onClick={() => abrirDetalles(reserva)}
-                                        className="btn btn-circle btn-ghost btn-sm"
-                                        title="Ver detalles completos"
-                                    >
-                                        <FaEye className="w-5 h-5 text-gray-600 hover:text-primario" />
-                                    </button>
+                                    {/* Botones de acción */}
+                                    <div className="flex gap-2">
+                                        {/* Botón para ver detalles */}
+                                        <button
+                                            onClick={() => abrirDetalles(reserva)}
+                                            className="btn btn-circle btn-ghost btn-sm"
+                                            title="Ver detalles completos"
+                                        >
+                                            <FaEye className="w-5 h-5 text-gray-600 hover:text-primario" />
+                                        </button>
+
+                                        {/* Botón para cancelar reserva */}
+                                        {puedeCancelarReservas() && puedeCancelarReserva(reserva) && (
+                                            <button
+                                                onClick={() => abrirModalCancelar(reserva)}
+                                                className="btn btn-circle btn-ghost btn-sm text-red-600 hover:text-red-800 hover:bg-red-50"
+                                                title="Cancelar reserva"
+                                            >
+                                                <FaTimes className="w-5 h-5" />
+                                            </button>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -206,6 +270,7 @@ export const MisReservas = () => {
                                 {/* Información básica */}
                                 <div className="bg-base-200 p-4 rounded-lg space-y-2">
                                     <h4 className="font-semibold mb-2">Información General</h4>
+                                    <p  className="text-sm"><strong>Código:</strong> {reservaSeleccionada.codigo}</p>
                                     <p className="text-sm"><strong>Motivo:</strong> {
                                         (() => {
                                             let motivo = reservaSeleccionada.motivo || 'Sin especificar';
@@ -370,6 +435,83 @@ export const MisReservas = () => {
                                 </div>
                             </div>
                         </>
+                    )}
+                </div>
+                <form method="dialog" className="modal-backdrop">
+                    <button>cerrar</button>
+                </form>
+            </dialog>
+
+            {/* Modal de cancelación */}
+            <dialog ref={cancelarModalRef} className="modal">
+                <div className="modal-box w-11/12 max-w-md">
+                    <form method="dialog">
+                        <button className="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button>
+                    </form>
+
+                    <h3 className="font-bold text-lg mb-4 text-red-600">Cancelar Reserva</h3>
+
+                    {reservaACancelar && (
+                        <div className="space-y-4">
+                            <div className="bg-gray-50 p-3 rounded-lg">
+                                <p className="text-sm font-medium">Reserva:</p>
+                                <p className="text-sm text-gray-700">
+                                    {(() => {
+                                        let motivo = reservaACancelar.motivo || 'Reserva';
+                                        motivo = motivo.replace(/\[CANCELADA:\s*[^\]]*\]\s*/gi, '');
+                                        return motivo.trim() || 'Reserva';
+                                    })()}
+                                </p>
+                                <p className="text-sm text-gray-600 mt-1">
+                                    📅 {formatearFecha(reservaACancelar.fecha)} • 🕐 {reservaACancelar.horaInicio} - {reservaACancelar.horaFin}
+                                </p>
+                            </div>
+
+                            <div className="form-control">
+                                <label className="label">
+                                    <span className="label-text font-medium">Motivo de cancelación *</span>
+                                </label>
+                                <textarea
+                                    className="textarea textarea-bordered h-24 resize-none"
+                                    placeholder="Ingrese el motivo por el cual desea cancelar esta reserva..."
+                                    value={motivoCancelacion}
+                                    onChange={(e) => setMotivoCancelacion(e.target.value)}
+                                    required
+                                />
+                                <label className="label">
+                                    <span className="label-text-alt text-gray-500">Este campo es obligatorio</span>
+                                </label>
+                            </div>
+
+                            <div className="alert alert-warning">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                                </svg>
+                                <span className="text-sm">Esta acción no se puede deshacer. Se enviará una notificación por correo electrónico.</span>
+                            </div>
+
+                            <div className="flex gap-3 justify-end">
+                                <button
+                                    type="button"
+                                    className="btn btn-ghost"
+                                    onClick={() => cancelarModalRef.current?.close()}
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    type="button"
+                                    className="btn btn-error"
+                                    onClick={confirmarCancelacion}
+                                    disabled={!motivoCancelacion.trim() || isLoading}
+                                >
+                                    {isLoading ? (
+                                        <span className="loading loading-spinner loading-sm"></span>
+                                    ) : (
+                                        'Confirmar Cancelación'
+                                    )}
+                                </button>
+                            </div>
+                        </div>
                     )}
                 </div>
                 <form method="dialog" className="modal-backdrop">

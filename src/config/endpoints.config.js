@@ -15,6 +15,7 @@ export const API_ENDPOINTS = {
         porId: (id) => `/reservas/${encodeURIComponent(id)}`,
         porEquipo: (id) => `/reservas/equipo/${encodeURIComponent(id)}`,
         porAula: (id) => `/reservas/aula/${encodeURIComponent(id)}`,
+        cancelar: (id) => `/reservas/cancelar/${encodeURIComponent(id)}`,
     },
     equipos: {
         list: '/equipos',
@@ -25,5 +26,9 @@ export const API_ENDPOINTS = {
     },
     deshabilitacion: {
         status: '/api/deshabilitacion',
+    },
+    analytics: {
+        tiempoFormulario: '/analytics/tiempo-formulario',
+        estadisticasTiempoFormulario: '/analytics/tiempo-formulario/stats',
     },
 };

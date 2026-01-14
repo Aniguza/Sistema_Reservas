@@ -1,5 +1,6 @@
 import React from 'react'
 import imgHero from '../../assets/Images/fondoHero.png'
+import { Link } from 'react-router'
 
 export const Hero = () => {
     return (
@@ -10,6 +11,7 @@ export const Hero = () => {
                     `url(${imgHero})`,
             }}
         >
+            
             <div className="hero-overlay"></div>
             <div className="hero-content text-neutral-content text-center px-4">
                 <div className="max-w-4xl">
@@ -20,7 +22,7 @@ export const Hero = () => {
                         Accede a equipos de los laboratorios especializados para tus proyectos e investigaciones
                     </p>
                     <button className="btn bg-primario text-blanco shadow-none border-none mt-6 sm:mt-8 lg:mt-10 p-4 sm:p-5 lg:p-6 text-sm sm:text-base">
-                        EXPLORAR EQUIPOS
+                        <Link to="/catalogo">EXPLORAR EQUIPOS</Link>
                     </button>
                 </div>
             </div>

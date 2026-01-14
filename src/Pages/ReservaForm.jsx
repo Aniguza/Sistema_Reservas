@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
-import { Link } from 'react-router'
+import { Link, useNavigate } from 'react-router'
 import { useDispatch, useSelector } from 'react-redux';
 import { createReserva } from '../redux/slices/reservasSlice';
 import { CgDanger } from "react-icons/cg";
@@ -16,6 +16,7 @@ import { formatTime12 } from '../utils/time';
 
 export const ReservaForm = () => {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const { isLoading: isLoadingReserva, error, success } = useSelector(state => state.reservas);
   const { user: currentUser } = useSelector(state => state.auth);
   const { items: usuarios, loaded: usuariosLoaded } = useSelector(state => state.usuarios);
@@ -45,6 +46,11 @@ export const ReservaForm = () => {
   const [isSearching, setIsSearching] = useState(false);
   const [isDocente, setIsDocente] = useState(false);
   const [docenteDropdownOpen, setDocenteDropdownOpen] = useState(false);
+
+  // Estados para tracking de tiempo del formulario
+  const [tiempoInicio, setTiempoInicio] = useState(null);
+  const [tiempoFin, setTiempoFin] = useState(null);
+  const [duracionFormulario, setDuracionFormulario] = useState(null);
 
   useEffect(() => {
     if (!usuariosLoaded) {
@@ -117,8 +123,16 @@ export const ReservaForm = () => {
   
 
   const handleCorreoChange = (e) => {
-    setCorreoInput(e.target.value);
-    
+    const valor = e.target.value;
+
+    // Registrar tiempo de inicio en la primera interacción
+    if (!tiempoInicio && valor.length > 0) {
+      setTiempoInicio(performance.now());
+      console.log('⏱️ Inicio del formulario registrado');
+    }
+
+    setCorreoInput(valor);
+
     // Limpiar los campos si el usuario modifica el correo
     if (formData.nombre) {
       setFormData(prev => ({
@@ -238,6 +252,23 @@ export const ReservaForm = () => {
     abrirModalAceptarReserva();
   };
 
+  // Función para registrar el tiempo final cuando se confirma la reserva
+  const registrarTiempoFinal = () => {
+    if (tiempoInicio && !tiempoFin) {
+      const tiempoActual = performance.now();
+      setTiempoFin(tiempoActual);
+
+      // Calcular duración en segundos
+      const duracionSegundos = Math.round((tiempoActual - tiempoInicio) / 1000);
+      setDuracionFormulario(duracionSegundos);
+
+      console.log(`⏱️ Reserva confirmada en ${duracionSegundos} segundos`);
+
+      // Opcional: enviar al backend para analytics
+      enviarMetricasTiempo(duracionSegundos);
+    }
+  };
+
   const handleConfirmReserva = async () => {
     // Crear fecha con hora del mediodía para evitar problemas de zona horaria
     const fechaConHora = new Date(`${formData.fecha}T12:00:00`);
@@ -308,13 +339,14 @@ export const ReservaForm = () => {
       setEquipos([]);
       setCorreoInput('');
       setIsDocente(false);
+      resetTiempos();
 
       // Mostrar mensaje de éxito con toast
       showToast('¡Reserva confirmada con éxito! 🎉 Se enviará un correo con las indicaciones.', 'success', 5000);
 
       //regresar a pagina de catalogo después de un pequeño delay para que se vea el toast
       setTimeout(() => {
-        window.location.href = '/catalogo';
+        navigate('/catalogo');
       }, 1000);
 
     } catch (error) {
@@ -328,6 +360,77 @@ export const ReservaForm = () => {
       // Scroll hacia arriba para que el usuario vea el toast
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
+  };
+
+  // Función opcional para enviar métricas de tiempo al backend
+  const enviarMetricasTiempo = async (duracion) => {
+    // Solo enviar si existe el endpoint configurado
+    if (!API_ENDPOINTS.analytics?.tiempoFormulario) {
+      console.log(`📊 Métrica registrada: ${duracion} segundos (sin envío al backend)`);
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('access_token');
+      const response = await fetch(buildUrl(API_ENDPOINTS.analytics.tiempoFormulario), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          tipo: 'tiempo_completar_reserva',
+          duracion_segundos: duracion,
+          fecha_registro: new Date().toISOString(),
+          usuario: formData.correo || 'anonimo'
+        })
+      });
+
+      if (response.ok) {
+        console.log(`📊 Métrica enviada al backend: ${duracion} segundos`);
+      } else {
+        console.warn(`⚠️ Error enviando métrica al backend: ${response.status}`);
+      }
+    } catch (error) {
+      console.error('Error enviando métricas de tiempo:', error);
+    }
+  };
+
+  // Función para obtener estadísticas de tiempo (opcional)
+  const obtenerEstadisticasTiempo = async () => {
+    if (!API_ENDPOINTS.analytics?.estadisticasTiempoFormulario) {
+      console.log('📊 Endpoint de estadísticas no configurado');
+      return null;
+    }
+
+    try {
+      const token = localStorage.getItem('access_token');
+      const response = await fetch(buildUrl(API_ENDPOINTS.analytics.estadisticasTiempoFormulario), {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        const stats = await response.json();
+        console.log('📊 Estadísticas obtenidas:', stats);
+        return stats;
+      } else {
+        console.warn(`⚠️ Error obteniendo estadísticas: ${response.status}`);
+        return null;
+      }
+    } catch (error) {
+      console.error('Error obteniendo estadísticas:', error);
+      return null;
+    }
+  };
+
+  // Función para resetear los tiempos del formulario
+  const resetTiempos = () => {
+    setTiempoInicio(null);
+    setTiempoFin(null);
+    setDuracionFormulario(null);
   };
 
   const abrirModalCompañeros = () => {
@@ -568,7 +671,7 @@ export const ReservaForm = () => {
         {/* Modal de códigos */}
         <AgregarCompañeros ref={AgregarCompañerosRef} onSave={handleSaveCompaneros} initialCodes={companeros} />
         <AgregarEquipos ref={AgregarEquiposRef} onSave={handleSaveEquipos} initialSelected={equipos} />
-        <AceptarReserva ref={AceptarReservaRef} onConfirm={handleConfirmReserva} />
+        <AceptarReserva ref={AceptarReservaRef} onConfirm={handleConfirmReserva} onTimeRegister={registrarTiempoFinal} />
       </section>
 
     ) : (

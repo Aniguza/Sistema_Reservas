@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { Link, useParams, useNavigate } from 'react-router'
 import { useSelector } from 'react-redux'
 import { CalendarioDisponibilidad } from '../Components/CalendarioDisponibilidad'
@@ -33,7 +33,8 @@ export const DetalleEquipo = () => {
         total: 0,
         disponibles: 0,
         ocupadas: 0,
-        porcentajeOcupacion: 0
+        porcentajeOcupacion: 0,
+        reservasConfirmadas: 0
     });
     const [selectedDate, setSelectedDate] = useState({});
 
@@ -83,19 +84,24 @@ export const DetalleEquipo = () => {
         const disponibles = Math.max(0, totalDiasVisibles - ocupadas);
         const porcentaje = totalDiasVisibles > 0 ? Math.round((ocupadas / totalDiasVisibles) * 100) : 0;
 
+        // Contar reservas confirmadas
+        const reservasConfirmadas = reservasEquipo.filter(reserva =>
+            String(reserva.estado || '').toLowerCase() === 'confirmada'
+        ).length;
+
         setEstadisticas({
             total: totalDiasVisibles,
             disponibles,
             ocupadas,
-            porcentajeOcupacion: porcentaje
+            porcentajeOcupacion: porcentaje,
+            reservasConfirmadas
         });
     }, [recurso, id, reservasEquipo]);
 
-    const handleDateSelect = (fecha, reservas) => {
+    const handleDateSelect = useCallback((fecha, reservas) => {
         // reservas puede ser null o un array de reservas para ese día
         setSelectedDate({ fecha, reservas: reservas || [] });
-        console.log('Fecha seleccionada:', fecha, 'Reservas:', reservas);
-    };
+    }, []);
 
     
 
@@ -267,8 +273,8 @@ export const DetalleEquipo = () => {
                                 <div className="text-sm text-green-800">Disponibles</div>
                             </div>
                             <div className="bg-red-50 p-4 rounded-lg text-center">
-                                <div className="text-2xl font-bold text-red-600">{estadisticas.ocupadas || 0}</div>
-                                <div className="text-sm text-red-800">Ocupadas</div>
+                                <div className="text-2xl font-bold text-red-600">{estadisticas.reservasConfirmadas || 0}</div>
+                                <div className="text-sm text-red-800">Reservas</div>
                             </div>
                             <div className="bg-gray-50 p-4 rounded-lg text-center">
                                 <div className="text-2xl font-bold text-gray-600">{estadisticas.porcentajeOcupacion || 0}%</div>
@@ -278,9 +284,8 @@ export const DetalleEquipo = () => {
 
                         <p className="parrafos text-sm text-gray-600 mb-6">
                             Selecciona las fechas para ver la disponibilidad {tipoRecurso === 'Equipo' ? 'del equipo' : 'del aula'}.
-                            Las fechas en <span className="text-green-600 font-semibold">verde</span> están disponibles,
-                            las fechas en <span className="text-red-600 font-semibold">rojo</span> están ocupadas.
-
+                            Las fechas en <span className="text-green-600 font-semibold">verde</span> están libres,
+                            las fechas en <span className="text-red-600 font-semibold">rojo</span> tienen una reserva o algún horario ocupado.
                         </p>
 
                         <CalendarioDisponibilidad
@@ -295,7 +300,7 @@ export const DetalleEquipo = () => {
                         {/* Detalle de horarios si la fecha seleccionada tiene reservas/ocupaciones */}
                         {selectedDate && Array.isArray(selectedDate.reservas) && selectedDate.reservas.length > 0 && (
                             <div className="w-full flex justify-center">
-                                <div className="mt-4 p-4 bg-baseGris rounded-lg w-100 justify-center">
+                                <div className="mt-4 p-4 bg-baseGris rounded-lg w-130 justify-center">
                                     <h4 className="font-semibold mb-2">Horarios para {formatISODateSafe(selectedDate.fecha)}</h4>
                                     <ul className="text-sm text-gray-700 space-y-1">
                                         {selectedDate.reservas.map((r, idx) => {
