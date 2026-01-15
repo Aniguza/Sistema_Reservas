@@ -46,6 +46,10 @@ export const ReservaForm = () => {
   const [isSearching, setIsSearching] = useState(false);
   const [isDocente, setIsDocente] = useState(false);
   const [docenteDropdownOpen, setDocenteDropdownOpen] = useState(false);
+  const [cursoDropdownOpen, setCursoDropdownOpen] = useState(false);
+  const cursoDropdownRef = useRef(null);
+  const [propositoDropdownOpen, setPropositoDropdownOpen] = useState(false);
+  const propositoDropdownRef = useRef(null);
 
   // Estados para tracking de tiempo del formulario
   const [tiempoInicio, setTiempoInicio] = useState(null);
@@ -71,6 +75,41 @@ export const ReservaForm = () => {
       return docenteId && formData.docente && formData.docente === docenteId;
     })
   ), [docentesDisponibles, formData.docente]);
+
+  const cursosDisponibles = useMemo(() => [
+    'Programación I',
+    'Programación II',
+    'Programación III',
+    'Estructuras de Datos',
+    'Bases de Datos',
+    'Ingeniería de Software',
+    'Redes de Computadoras',
+    'Sistemas Operativos',
+    'Inteligencia Artificial',
+    'Desarrollo Web',
+    'Desarrollo Móvil',
+    'Análisis de Algoritmos',
+    'Ciberseguridad',
+    'Arquitectura de Computadoras',
+    'Matemáticas Discretas',
+    'Estadística',
+    'Física',
+    'Química',
+    'Electrónica',
+    'Laboratorio de Electrónica',
+    'Proyecto Final',
+    'Tesis',
+    'Investigación'
+  ], []);
+
+  const propositosDisponibles = useMemo(() => [
+    'Desarrollo de proyectos de curso',
+    'Elaboración de proyecto final',
+    'Prácticas para evaluaciones o exposiciones',
+    'Desarrollo de trabajos grupales',
+    'Uso de software especializado del laboratorio',
+    'Simulación o pruebas técnicas'
+  ], []);
 
   useEffect(() => {
     if (!docenteDropdownOpen) {
@@ -114,6 +153,40 @@ export const ReservaForm = () => {
       setDocenteDropdownOpen(false);
     }
   }, [isDocente]);
+
+  useEffect(() => {
+    if (!cursoDropdownOpen) {
+      return;
+    }
+
+    const handleClickOutside = (event) => {
+      if (cursoDropdownRef.current && !cursoDropdownRef.current.contains(event.target)) {
+        setCursoDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [cursoDropdownOpen]);
+
+  useEffect(() => {
+    if (!propositoDropdownOpen) {
+      return;
+    }
+
+    const handleClickOutside = (event) => {
+      if (propositoDropdownRef.current && !propositoDropdownRef.current.contains(event.target)) {
+        setPropositoDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [propositoDropdownOpen]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -237,6 +310,24 @@ export const ReservaForm = () => {
     const docenteId = docente.correo || docente.id || docente._id || docente.nombre || '';
     setFormData(prev => ({ ...prev, docente: docenteId }));
     setDocenteDropdownOpen(false);
+  };
+
+  const toggleCursoDropdown = () => {
+    setCursoDropdownOpen(prev => !prev);
+  };
+
+  const handleSelectCurso = (curso) => {
+    setFormData(prev => ({ ...prev, curso: curso }));
+    setCursoDropdownOpen(false);
+  };
+
+  const togglePropositoDropdown = () => {
+    setPropositoDropdownOpen(prev => !prev);
+  };
+
+  const handleSelectProposito = (proposito) => {
+    setFormData(prev => ({ ...prev, proposito: proposito }));
+    setPropositoDropdownOpen(false);
   };
 
   const handleSubmit = async (e) => {
@@ -576,15 +667,40 @@ export const ReservaForm = () => {
               <div className='w-full'>
                 <fieldset className="fieldset">
                   <legend className="fieldset-legend text-negro text-sm">Curso*</legend>
-                  <input
-                    type="text"
-                    name="curso"
-                    value={formData.curso}
-                    onChange={handleChange}
-                    className="input campos"
-                    placeholder="Nombre del curso"
-                    required
-                  />
+                  <div className="relative" ref={cursoDropdownRef}>
+                    <button
+                      type="button"
+                      onClick={toggleCursoDropdown}
+                      className="input campos pr-5 flex items-center justify-between cursor-pointer"
+                      aria-haspopup="listbox"
+                      aria-expanded={cursoDropdownOpen}
+                    >
+                      <span className={`truncate ${formData.curso ? 'text-negro' : 'text-gray-500'}`}>
+                        {formData.curso || 'Selecciona un curso'}
+                      </span>
+                      <FaChevronDown className={`text-primario transition-transform duration-200 ${cursoDropdownOpen ? 'rotate-180' : ''}`} />
+                    </button>
+                    {cursoDropdownOpen && (
+                      <ul className="absolute z-20 w-full bg-white border border-negro rounded-md shadow-lg max-h-48 overflow-auto" role="listbox">
+                        {cursosDisponibles.map((curso, index) => {
+                          const isSelected = formData.curso === curso;
+                          return (
+                            <li key={`curso-${index}`} className="border-b last:border-b-0 border-gray-200">
+                              <button
+                                type="button"
+                                className={`w-full text-left px-4 py-2 text-sm transition-colors ${isSelected ? 'bg-baseRojo font-semibold text-negro' : 'hover:bg-baseRojo'}`}
+                                role="option"
+                                aria-selected={isSelected}
+                                onClick={() => handleSelectCurso(curso)}
+                              >
+                                {curso}
+                              </button>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    )}
+                  </div>
                 </fieldset>
                 <fieldset className="fieldset">
                   <legend className="fieldset-legend text-negro text-sm">Equipo o aula a solicitar*</legend>
@@ -609,15 +725,40 @@ export const ReservaForm = () => {
                 </fieldset>
                 <fieldset className="fieldset">
                   <legend className="fieldset-legend text-negro text-sm">Propósito*</legend>
-                  <input
-                    type="text"
-                    name="proposito"
-                    value={formData.proposito}
-                    onChange={handleChange}
-                    className="input campos"
-                    placeholder=''
-                    required
-                  />
+                  <div className="relative" ref={propositoDropdownRef}>
+                    <button
+                      type="button"
+                      onClick={togglePropositoDropdown}
+                      className="input campos pr-5 flex items-center justify-between cursor-pointer"
+                      aria-haspopup="listbox"
+                      aria-expanded={propositoDropdownOpen}
+                    >
+                      <span className={`truncate ${formData.proposito ? 'text-negro' : 'text-gray-500'}`}>
+                        {formData.proposito || 'Seleccionar propósito'}
+                      </span>
+                      <FaChevronDown className={`text-primario transition-transform duration-200 ${propositoDropdownOpen ? 'rotate-180' : ''}`} />
+                    </button>
+                    {propositoDropdownOpen && (
+                      <ul className="absolute z-20 w-full bg-white border border-negro rounded-md shadow-lg max-h-48 overflow-auto" role="listbox">
+                        {propositosDisponibles.map((proposito, index) => {
+                          const isSelected = formData.proposito === proposito;
+                          return (
+                            <li key={`proposito-${index}`} className="border-b last:border-b-0 border-gray-200">
+                              <button
+                                type="button"
+                                className={`w-full text-left px-4 py-2 text-sm transition-colors ${isSelected ? 'bg-baseRojo font-semibold text-negro' : 'hover:bg-baseRojo'}`}
+                                role="option"
+                                aria-selected={isSelected}
+                                onClick={() => handleSelectProposito(proposito)}
+                              >
+                                {proposito}
+                              </button>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    )}
+                  </div>
                 </fieldset>
                 <div className='flex gap-6'>
                   <fieldset className="fieldset w-full">
