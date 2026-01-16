@@ -8,6 +8,7 @@ import { useToast } from '../Context/ToastContext';
 import { buildUrl } from '../config/api.config';
 import { API_ENDPOINTS } from '../config/endpoints.config';
 import { fetchUsuarios } from '../redux/slices/usuariosSlice';
+import { useInitialData } from '../hooks/useInitialData';
 
 import { AgregarCompañeros } from '../Components/modals/AgregarCompañeros.jsx';
 import { AgregarEquipos } from '../Components/modals/AgregarEquipos.jsx';
@@ -21,6 +22,7 @@ export const ReservaForm = () => {
   const { user: currentUser } = useSelector(state => state.auth);
   const { items: usuarios, loaded: usuariosLoaded } = useSelector(state => state.usuarios);
   const { showToast } = useToast();
+  const { equipos: equiposData, aulas, isLoading: loadingInitialData } = useInitialData();
 
   const AgregarCompañerosRef = useRef(null);
   const AgregarEquiposRef = useRef(null);
@@ -46,8 +48,6 @@ export const ReservaForm = () => {
   const [isSearching, setIsSearching] = useState(false);
   const [isDocente, setIsDocente] = useState(false);
   const [docenteDropdownOpen, setDocenteDropdownOpen] = useState(false);
-  const [cursoDropdownOpen, setCursoDropdownOpen] = useState(false);
-  const cursoDropdownRef = useRef(null);
   const [propositoDropdownOpen, setPropositoDropdownOpen] = useState(false);
   const propositoDropdownRef = useRef(null);
 
@@ -55,6 +55,15 @@ export const ReservaForm = () => {
   const [tiempoInicio, setTiempoInicio] = useState(null);
   const [tiempoFin, setTiempoFin] = useState(null);
   const [duracionFormulario, setDuracionFormulario] = useState(null);
+
+  // Estados para validaciones de reglas de negocio
+  const [validandoReservaDiaria, setValidandoReservaDiaria] = useState(false);
+  const [validandoDisponibilidad, setValidandoDisponibilidad] = useState(false);
+  const [validacionTiempoReal, setValidacionTiempoReal] = useState({
+    validando: false,
+    mensaje: null,
+    tipo: null // 'success', 'warning', 'error'
+  });
 
   useEffect(() => {
     if (!usuariosLoaded) {
@@ -75,32 +84,6 @@ export const ReservaForm = () => {
       return docenteId && formData.docente && formData.docente === docenteId;
     })
   ), [docentesDisponibles, formData.docente]);
-
-  const cursosDisponibles = useMemo(() => [
-    'Programación I',
-    'Programación II',
-    'Programación III',
-    'Estructuras de Datos',
-    'Bases de Datos',
-    'Ingeniería de Software',
-    'Redes de Computadoras',
-    'Sistemas Operativos',
-    'Inteligencia Artificial',
-    'Desarrollo Web',
-    'Desarrollo Móvil',
-    'Análisis de Algoritmos',
-    'Ciberseguridad',
-    'Arquitectura de Computadoras',
-    'Matemáticas Discretas',
-    'Estadística',
-    'Física',
-    'Química',
-    'Electrónica',
-    'Laboratorio de Electrónica',
-    'Proyecto Final',
-    'Tesis',
-    'Investigación'
-  ], []);
 
   const propositosDisponibles = useMemo(() => [
     'Desarrollo de proyectos de curso',
@@ -155,23 +138,6 @@ export const ReservaForm = () => {
   }, [isDocente]);
 
   useEffect(() => {
-    if (!cursoDropdownOpen) {
-      return;
-    }
-
-    const handleClickOutside = (event) => {
-      if (cursoDropdownRef.current && !cursoDropdownRef.current.contains(event.target)) {
-        setCursoDropdownOpen(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [cursoDropdownOpen]);
-
-  useEffect(() => {
     if (!propositoDropdownOpen) {
       return;
     }
@@ -187,6 +153,15 @@ export const ReservaForm = () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [propositoDropdownOpen]);
+
+  // Validación en tiempo real cuando cambian fecha, hora o equipos
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      validarEnTiempoReal();
+    }, 500); // Debounce de 500ms para evitar llamadas excesivas
+
+    return () => clearTimeout(timeoutId);
+  }, [formData.fecha, formData.horaInicio, formData.horaFin, equipos, formData.correo]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -294,9 +269,31 @@ export const ReservaForm = () => {
     setCompaneros(codes);
   };
 
+  // Función para obtener equipos con información del aula
+  const getEquiposConAula = (selectedEquipos) => {
+    return selectedEquipos.map(item => {
+      const equipoData = equiposData.find(eq => eq._id === item.equipo);
+      if (!equipoData) return item;
+
+      // Buscar en qué aula está el equipo
+      const aulaDelEquipo = aulas.find(aula =>
+        Array.isArray(aula.equipos) && aula.equipos.some(e =>
+          (typeof e === 'object' && e._id === equipoData._id) || e === equipoData._id
+        )
+      );
+
+      return {
+        ...item,
+        aula: aulaDelEquipo ? aulaDelEquipo._id : null,
+        aulaNombre: aulaDelEquipo ? aulaDelEquipo.nombre : null
+      };
+    });
+  };
+
   const handleSaveEquipos = (selectedEquipos) => {
     // selectedEquipos ya viene en formato { equipo: id, cantidad: num }
-    setEquipos(selectedEquipos);
+    const equiposConAula = getEquiposConAula(selectedEquipos);
+    setEquipos(equiposConAula);
   };
 
   const toggleDocenteDropdown = () => {
@@ -312,15 +309,6 @@ export const ReservaForm = () => {
     setDocenteDropdownOpen(false);
   };
 
-  const toggleCursoDropdown = () => {
-    setCursoDropdownOpen(prev => !prev);
-  };
-
-  const handleSelectCurso = (curso) => {
-    setFormData(prev => ({ ...prev, curso: curso }));
-    setCursoDropdownOpen(false);
-  };
-
   const togglePropositoDropdown = () => {
     setPropositoDropdownOpen(prev => !prev);
   };
@@ -328,6 +316,110 @@ export const ReservaForm = () => {
   const handleSelectProposito = (proposito) => {
     setFormData(prev => ({ ...prev, proposito: proposito }));
     setPropositoDropdownOpen(false);
+  };
+
+  // Función para verificar si el usuario ya tiene reserva para el día seleccionado
+  const verificarReservaDiaria = async () => {
+    try {
+      setValidandoReservaDiaria(true);
+      const token = localStorage.getItem('access_token');
+      const response = await fetch(buildUrl(API_ENDPOINTS.reservas.porUsuario(formData.correo)), {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Error al verificar reservas existentes');
+      }
+
+      const reservasUsuario = await response.json();
+
+      // Filtrar reservas confirmadas para la fecha seleccionada
+      const fechaSeleccionada = new Date(formData.fecha + 'T00:00:00');
+      const reservasDiaSeleccionado = reservasUsuario.filter(reserva => {
+        const fechaReserva = new Date(reserva.fecha);
+        return reserva.estado === 'confirmada' &&
+          fechaReserva.toDateString() === fechaSeleccionada.toDateString();
+      });
+
+      return reservasDiaSeleccionado.length > 0;
+    } catch (error) {
+      console.error('Error verificando reserva diaria:', error);
+      throw new Error('No se pudo verificar las reservas existentes. Por favor, intenta nuevamente.');
+    } finally {
+      setValidandoReservaDiaria(false);
+    }
+  };
+
+  // Función para validación en tiempo real de fecha/hora/equipos
+  const validarEnTiempoReal = async () => {
+    // Solo validar si tenemos todos los datos necesarios
+    if (!formData.fecha || !formData.horaInicio || !formData.horaFin || !formData.correo || equipos.length === 0) {
+      setValidacionTiempoReal({ validando: false, mensaje: null, tipo: null });
+      return;
+    }
+
+    try {
+      setValidacionTiempoReal({ validando: true, mensaje: null, tipo: null });
+
+      // Verificar reserva diaria primero
+      const tieneReservaDia = await verificarReservaDiaria();
+      if (tieneReservaDia) {
+        setValidacionTiempoReal({
+          validando: false,
+          mensaje: 'Ya tienes una reserva confirmada para este día',
+          tipo: 'error'
+        });
+        return;
+      }
+
+      // Verificar disponibilidad con validaciones del backend
+      const fechaConHora = new Date(`${formData.fecha}T12:00:00`);
+      const fechaISO = fechaConHora.toISOString();
+
+      const token = localStorage.getItem('access_token');
+      const response = await fetch(buildUrl(API_ENDPOINTS.reservas.disponibilidad), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          equipos: equipos,
+          aulas: [...new Set(equipos.map(eq => eq.aula).filter(aula => aula !== null))],
+          fecha: fechaISO,
+          horaInicio: formData.horaInicio,
+          horaFin: formData.horaFin,
+          correoUsuario: formData.correo
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.disponible) {
+        setValidacionTiempoReal({
+          validando: false,
+          mensaje: data.message || data.motivo ,
+          tipo: 'warning'
+        });
+      } else {
+        setValidacionTiempoReal({
+          validando: false,
+          mensaje: 'Horario disponible para reserva',
+          tipo: 'success'
+        });
+      }
+    } catch (error) {
+      console.error('Error en validación tiempo real:', error);
+      setValidacionTiempoReal({
+        validando: false,
+        mensaje: 'Error al verificar disponibilidad',
+        tipo: 'error'
+      });
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -364,9 +456,22 @@ export const ReservaForm = () => {
     // Crear fecha con hora del mediodía para evitar problemas de zona horaria
     const fechaConHora = new Date(`${formData.fecha}T12:00:00`);
     const fechaISO = fechaConHora.toISOString();
-    
+
+    // REGLA 1: Verificar que el usuario no tenga otra reserva para este día
+    try {
+      const tieneReservaDia = await verificarReservaDiaria();
+      if (tieneReservaDia) {
+        showToast('Ya tienes una reserva confirmada para este día. Solo puedes hacer una reserva por día.', 'error', 6000);
+        return;
+      }
+    } catch (error) {
+      showToast(error.message || 'Error al verificar reservas existentes. Por favor, intenta nuevamente.', 'error');
+      return;
+    }
+
     // Verificar disponibilidad antes de crear la reserva
     try {
+      setValidandoDisponibilidad(true);
       const token = localStorage.getItem('access_token');
       const disponibilidadResponse = await fetch(buildUrl(API_ENDPOINTS.reservas.disponibilidad), {
         method: 'POST',
@@ -376,23 +481,27 @@ export const ReservaForm = () => {
         },
         body: JSON.stringify({
           equipos: equipos,
+          aulas: [...new Set(equipos.map(eq => eq.aula).filter(aula => aula !== null))],
           fecha: fechaISO,
           horaInicio: formData.horaInicio,
-          horaFin: formData.horaFin
+          horaFin: formData.horaFin,
+          correoUsuario: formData.correo
         })
       });
 
       const disponibilidadData = await disponibilidadResponse.json();
-      
+
       if (!disponibilidadResponse.ok || !disponibilidadData.disponible) {
         AceptarReservaRef.current?.close();
-        showToast(disponibilidadData.mensaje || 'Algunos equipos no están disponibles en la fecha y hora seleccionadas. Por favor, verifica las cantidades disponibles.', 'error', 6000);
+        showToast(disponibilidadData.mensaje || 'Los equipos no están disponibles en el horario seleccionado. Puede deberse a conflictos de horario o falta de separación mínima de 1 hora entre usuarios diferentes.', 'error', 6000);
         return;
       }
     } catch (error) {
       AceptarReservaRef.current?.close();
       showToast('Error al verificar disponibilidad. Por favor, intenta nuevamente.', 'error');
       return;
+    } finally {
+      setValidandoDisponibilidad(false);
     }
     
     const payload = {
@@ -444,10 +553,13 @@ export const ReservaForm = () => {
       // Cerrar modal
       AceptarReservaRef.current?.close();
 
-      // Mostrar el mensaje de error del backend con toast
-      const mensajeError = error.message || error || 'Error al crear la reserva. Por favor, intenta nuevamente.';
-      showToast(mensajeError, 'error', 6000);
+      // Manejo específico de errores de validación de reglas de negocio
+      let mensajeError = error.message || error || 'Error al crear la reserva. Por favor, intenta nuevamente.';
+
       
+
+      showToast(mensajeError, 'error', 6000);
+
       // Scroll hacia arriba para que el usuario vea el toast
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
@@ -667,40 +779,15 @@ export const ReservaForm = () => {
               <div className='w-full'>
                 <fieldset className="fieldset">
                   <legend className="fieldset-legend text-negro text-sm">Curso*</legend>
-                  <div className="relative" ref={cursoDropdownRef}>
-                    <button
-                      type="button"
-                      onClick={toggleCursoDropdown}
-                      className="input campos pr-5 flex items-center justify-between cursor-pointer"
-                      aria-haspopup="listbox"
-                      aria-expanded={cursoDropdownOpen}
-                    >
-                      <span className={`truncate ${formData.curso ? 'text-negro' : 'text-gray-500'}`}>
-                        {formData.curso || 'Selecciona un curso'}
-                      </span>
-                      <FaChevronDown className={`text-primario transition-transform duration-200 ${cursoDropdownOpen ? 'rotate-180' : ''}`} />
-                    </button>
-                    {cursoDropdownOpen && (
-                      <ul className="absolute z-20 w-full bg-white border border-negro rounded-md shadow-lg max-h-48 overflow-auto" role="listbox">
-                        {cursosDisponibles.map((curso, index) => {
-                          const isSelected = formData.curso === curso;
-                          return (
-                            <li key={`curso-${index}`} className="border-b last:border-b-0 border-gray-200">
-                              <button
-                                type="button"
-                                className={`w-full text-left px-4 py-2 text-sm transition-colors ${isSelected ? 'bg-baseRojo font-semibold text-negro' : 'hover:bg-baseRojo'}`}
-                                role="option"
-                                aria-selected={isSelected}
-                                onClick={() => handleSelectCurso(curso)}
-                              >
-                                {curso}
-                              </button>
-                            </li>
-                          );
-                        })}
-                      </ul>
-                    )}
-                  </div>
+                  <input
+                    type="text"
+                    name="curso"
+                    value={formData.curso}
+                    onChange={handleChange}
+                    className="input campos"
+                    placeholder="Ingresa el curso"
+                    required
+                  />
                 </fieldset>
                 <fieldset className="fieldset">
                   <legend className="fieldset-legend text-negro text-sm">Equipo o aula a solicitar*</legend>
@@ -801,11 +888,43 @@ export const ReservaForm = () => {
                     required
                   />
                 </fieldset>
+
+                {/* Feedback de validación en tiempo real */}
+                {validacionTiempoReal.mensaje && (
+                  <div className={`mt-3 p-3 rounded-lg text-sm ${
+                    validacionTiempoReal.tipo === 'success' ? 'bg-green-100 text-green-800 border border-green-200' :
+                    validacionTiempoReal.tipo === 'warning' ? 'bg-yellow-100 text-yellow-800 border border-yellow-200' :
+                    'bg-red-100 text-red-800 border border-red-200'
+                  }`}>
+                    {validacionTiempoReal.validando ? (
+                      <div className="flex items-center gap-2">
+                        <span className="loading loading-spinner loading-sm"></span>
+                        Verificando disponibilidad...
+                      </div>
+                    ) : (
+                      validacionTiempoReal.mensaje
+                    )}
+                  </div>
+                )}
+
                 <p className='mt-5 text-sm text-primario'>
                   <CgDanger className='inline-block' /> La reserva se realiza con 2 días de anticipación. Una vez confirmada, se enviará un correo con las indicaciones necesarias.</p>
               </div>
             </div>
-            <button type="submit" className="btn bg-primario text-blanco shadow-none border-none mt-10 p-6">ENVIAR</button>
+            <button
+              type="submit"
+              className="btn bg-primario text-blanco shadow-none border-none mt-10 p-6"
+              disabled={validandoReservaDiaria || validandoDisponibilidad}
+            >
+              {(validandoReservaDiaria || validandoDisponibilidad) ? (
+                <div className="flex items-center gap-2">
+                  <span className="loading loading-spinner loading-sm"></span>
+                  Validando...
+                </div>
+              ) : (
+                'ENVIAR'
+              )}
+            </button>
           </form>
         </div>
 
