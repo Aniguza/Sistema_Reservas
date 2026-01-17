@@ -195,12 +195,24 @@ const reservasSlice = createSlice({
             })
             .addCase(fetchReservasByUser.fulfilled, (state, action) => {
                 state.isLoading = false;
-                state.userReservas = action.payload;
+                // Manejar diferentes formatos de respuesta de la API
+                const payload = action.payload;
+                if (Array.isArray(payload)) {
+                    state.userReservas = payload;
+                } else if (payload && Array.isArray(payload.data)) {
+                    state.userReservas = payload.data;
+                } else if (payload && Array.isArray(payload.reservas)) {
+                    state.userReservas = payload.reservas;
+                } else {
+                    state.userReservas = [];
+                    console.warn('Formato de respuesta inesperado en fetchReservasByUser:', payload);
+                }
                 state.error = null;
             })
             .addCase(fetchReservasByUser.rejected, (state, action) => {
                 state.isLoading = false;
                 state.error = action.payload;
+                state.userReservas = [];
             })
             // Actualizar reserva
             .addCase(updateReserva.pending, (state) => {

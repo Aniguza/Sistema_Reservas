@@ -62,7 +62,7 @@ export const Register = () => {
 
     try {
       await usuariosService.createUsuario({
-        correo: formValues.correo.trim(),
+        correo: formValues.correo.trim().toLowerCase(),
         nombre: formValues.nombre.trim(),
         carrera: formValues.carrera.trim(),
         rol: formValues.rol,
@@ -108,16 +108,17 @@ export const Register = () => {
             disabled={isSubmitting}
             required
           />
-          <input
-            type="text"
+          <select
             className="login-input"
-            placeholder="Carrera"
             name="carrera"
             value={formValues.carrera}
             onChange={handleChange}
             disabled={isSubmitting}
             required
-          />
+          >
+            <option value="" disabled>Selecciona una carrera</option>
+            <option value="Ingeniería de sistemas e informática">Ingeniería de sistemas e informática</option>
+          </select>
           <select
             className="login-input"
             name="rol"

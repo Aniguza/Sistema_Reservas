@@ -51,6 +51,54 @@ export const ReservaForm = () => {
   const [docenteDropdownOpen, setDocenteDropdownOpen] = useState(false);
   const [propositoDropdownOpen, setPropositoDropdownOpen] = useState(false);
   const propositoDropdownRef = useRef(null);
+  const [duracionReserva, setDuracionReserva] = useState('1'); // Duración en horas (1, 2, 3, 4)
+
+  // Generar opciones de hora cada 15 minutos (de 7:00 a 21:00)
+  const opcionesHoraInicio = useMemo(() => {
+    const opciones = [];
+    for (let hora = 9; hora <= 21; hora++) {
+      for (let minuto = 0; minuto < 60; minuto += 15) {
+        // No agregar horas después de las 21:00 que no permitan al menos 1 hora de reserva
+        if (hora === 21 && minuto > 0) continue;
+        const horaStr = hora.toString().padStart(2, '0');
+        const minutoStr = minuto.toString().padStart(2, '0');
+        const valor = `${horaStr}:${minutoStr}`;
+        const etiqueta = formatTime12(valor);
+        opciones.push({ valor, etiqueta });
+      }
+    }
+    return opciones;
+  }, []);
+
+  // Calcular hora fin basada en hora inicio + duración
+  const calcularHoraFin = (horaInicio, duracion) => {
+    if (!horaInicio) return '';
+    const [horas, minutos] = horaInicio.split(':').map(Number);
+    const nuevaHora = horas + parseInt(duracion);
+    // Limitar a máximo 22:00
+    if (nuevaHora > 22) return '22:00';
+    return `${nuevaHora.toString().padStart(2, '0')}:${minutos.toString().padStart(2, '0')}`;
+  };
+
+  // Actualizar hora fin cuando cambia hora inicio o duración
+  const handleHoraInicioChange = (e) => {
+    const nuevaHoraInicio = e.target.value;
+    const horaFin = calcularHoraFin(nuevaHoraInicio, duracionReserva);
+    setFormData(prev => ({ 
+      ...prev, 
+      horaInicio: nuevaHoraInicio,
+      horaFin: horaFin
+    }));
+  };
+
+  const handleDuracionChange = (e) => {
+    const nuevaDuracion = e.target.value;
+    setDuracionReserva(nuevaDuracion);
+    if (formData.horaInicio) {
+      const horaFin = calcularHoraFin(formData.horaInicio, nuevaDuracion);
+      setFormData(prev => ({ ...prev, horaFin: horaFin }));
+    }
+  };
 
   // Estados para tracking de tiempo del formulario
   const [tiempoInicio, setTiempoInicio] = useState(null);
@@ -570,6 +618,7 @@ export const ReservaForm = () => {
       setAulaSeleccionada(null);
       setCorreoInput('');
       setIsDocente(false);
+      setDuracionReserva('1');
       resetTiempos();
 
       // Mostrar mensaje de éxito con toast
@@ -884,33 +933,47 @@ export const ReservaForm = () => {
                     )}
                   </div>
                 </fieldset>
-                <div className='flex gap-6'>
-                  <fieldset className="fieldset w-full">
+                <div className='flex gap-4'>
+                  <fieldset className="fieldset flex-1">
                     <legend className="fieldset-legend text-negro text-sm">Hora Inicio*</legend>
-                    <input
-                      type="time"
+                    <select
                       name="horaInicio"
                       value={formData.horaInicio}
-                      onChange={handleChange}
-                      className="input bg-blanco border-negro w-full"
+                      onChange={handleHoraInicioChange}
+                      className="select bg-blanco border-negro w-full"
                       required
-                    />
-                    {formData.horaInicio && (
-                      <div className="text-sm text-gray-600">{formatTime12(formData.horaInicio)}</div>
-                    )}
+                    >
+                      <option value="">Seleccionar hora</option>
+                      {opcionesHoraInicio.map(({ valor, etiqueta }) => (
+                        <option key={valor} value={valor}>{etiqueta}</option>
+                      ))}
+                    </select>
                   </fieldset>
-                  <fieldset className="fieldset w-full">
-                    <legend className="fieldset-legend text-negro text-sm">Hora Fin*</legend>
-                    <input
-                      type="time"
-                      name="horaFin"
-                      value={formData.horaFin}
-                      onChange={handleChange}
-                      className="input bg-blanco border-negro w-full"
+                  <fieldset className="fieldset w-32">
+                    <legend className="fieldset-legend text-negro text-sm">Duración*</legend>
+                    <select
+                      value={duracionReserva}
+                      onChange={handleDuracionChange}
+                      className="select bg-blanco border-negro w-full"
                       required
+                    >
+                      <option value="1">1 hora</option>
+                      <option value="2">2 horas</option>
+                      <option value="3">3 horas</option>
+                      <option value="4">4 horas</option>
+                    </select>
+                  </fieldset>
+                  <fieldset className="fieldset flex-1">
+                    <legend className="fieldset-legend text-negro text-sm">Hora Fin</legend>
+                    <input
+                      type="text"
+                      value={formData.horaFin ? formatTime12(formData.horaFin) : ''}
+                      className="input bg-gray-100 border-negro w-full text-gray-600"
+                      disabled
+                      placeholder="Se calcula automáticamente"
                     />
                     {formData.horaFin && (
-                      <div className="text-sm text-gray-600">{formatTime12(formData.horaFin)}</div>
+                      <div className="text-xs text-gray-500 mt-1">({formData.horaFin})</div>
                     )}
                   </fieldset>
                 </div>

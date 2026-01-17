@@ -17,19 +17,29 @@ export const MisReservas = () => {
     const cancelarModalRef = useRef(null);
 
     useEffect(() => {
-        const user = JSON.parse(localStorage.getItem('user') || '{}');
-        const correo = user.correo;
-        
-        if (!correo) {
-            showToast('No se encontró información del usuario', 'error');
-            return;
-        }
+        const cargarReservas = async () => {
+            const user = JSON.parse(localStorage.getItem('user') || '{}');
+            const correo = user.correo;
+            
+            console.log('Usuario en localStorage:', user);
+            console.log('Correo usado para buscar reservas:', correo);
+            
+            if (!correo) {
+                showToast('No se encontró información del usuario', 'error');
+                return;
+            }
 
-        // Solo cargar si no hay reservas en el estado
-        if (!reservas || reservas.length === 0) {
-            dispatch(fetchReservasByUser(correo));
-        }
-    }, [dispatch]);
+            try {
+                const result = await dispatch(fetchReservasByUser(correo)).unwrap();
+                console.log('Reservas obtenidas:', result);
+            } catch (error) {
+                console.error('Error al cargar reservas:', error);
+                showToast('Error al cargar las reservas', 'error');
+            }
+        };
+
+        cargarReservas();
+    }, [dispatch, showToast]);
 
     const formatearFecha = (fecha) => {
         if (!fecha) return 'N/A';
@@ -61,9 +71,12 @@ export const MisReservas = () => {
         return estados[estado] || estado;
     };
 
+    // Asegurar que reservas sea siempre un array
+    const reservasArray = Array.isArray(reservas) ? reservas : [];
+    
     const reservasFiltradas = filtroEstado === 'Todas' 
-        ? reservas 
-        : reservas.filter(reserva => reserva.estado === filtroEstado);
+        ? reservasArray 
+        : reservasArray.filter(reserva => reserva.estado === filtroEstado);
 
     const abrirDetalles = (reserva) => {
         setReservaSeleccionada(reserva);
