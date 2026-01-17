@@ -824,7 +824,7 @@ export const ReservaForm = () => {
                       aria-expanded={docenteDropdownOpen}
                     >
                       <span className={`truncate ${formData.docente ? 'text-negro' : 'text-gray-500'}`}>
-                        {selectedDocente ? `${selectedDocente.nombre || 'Docente'} - ${selectedDocente.correo || 'Sin correo'}` : 'Selecciona un docente'}
+                        {selectedDocente ? `${selectedDocente.nombre || 'Docente'}` : 'Selecciona un docente'}
                       </span>
                       <FaChevronDown className={`text-primario transition-transform duration-200 ${docenteDropdownOpen ? 'rotate-180' : ''}`} />
                     </button>
