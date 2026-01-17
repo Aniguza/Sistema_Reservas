@@ -742,7 +742,7 @@ export const ReservaForm = () => {
                   />
                 </fieldset>
                 <fieldset className="fieldset">
-                  <legend className="fieldset-legend text-negro text-sm">Códigos universitarios y/o docente*</legend>
+                  <legend className="fieldset-legend text-negro text-sm">Compañeros:</legend>
                   <div className="relative">
                     <input
                       type="text"
