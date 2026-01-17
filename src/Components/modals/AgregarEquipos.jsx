@@ -1,5 +1,5 @@
 import React, { forwardRef, useState } from 'react'
-import { FaSearch } from "react-icons/fa";
+import { FaSearch, FaMinus, FaPlus } from "react-icons/fa";
 import { useInitialData } from '../../hooks/useInitialData';
 
 export const AgregarEquipos = forwardRef(({ onSave, initialSelected = [], initialSelectedAula = null }, ref) => {
@@ -12,9 +12,52 @@ export const AgregarEquipos = forwardRef(({ onSave, initialSelected = [], initia
     const [filtroAula, setFiltroAula] = useState('Todas');
     const [activeTab, setActiveTab] = useState('equipos'); // 'equipos' o 'aulas'
 
-    const handleToggle = (id, disponibilidad) => {
+    // Obtener equipos con información del aula (debe estar antes de las funciones que lo usan)
+    const equiposConAula = equipos.map(equipo => {
+        // Buscar en qué aula está el equipo
+        const aulaDelEquipo = aulas.find(aula =>
+            Array.isArray(aula.equipos) && aula.equipos.some(e =>
+                (typeof e === 'object' && e._id === equipo._id) || e === equipo._id
+            )
+        );
+        return {
+            ...equipo,
+            aula: aulaDelEquipo || null
+        };
+    });
+
+    // Obtener la cantidad máxima disponible de un equipo
+    const getCantidadMaxima = (equipo) => {
+        // El campo viene como 'quantity' desde la API
+        return equipo.quantity || equipo.cantidad || equipo.stock || 1;
+    };
+
+    // Obtener el aula de un equipo por su ID
+    const getAulaDeEquipo = (equipoId) => {
+        const equipo = equiposConAula.find(eq => eq._id === equipoId);
+        return equipo?.aula?._id || null;
+    };
+
+    // Determinar el aula de los equipos seleccionados (todos deben ser de la misma aula)
+    const aulaDeEquiposSeleccionados = selectedEquipos.length > 0 
+        ? getAulaDeEquipo(selectedEquipos[0].equipo)
+        : null;
+
+    // Verificar si un equipo está en otra aula (diferente a la de los equipos ya seleccionados)
+    const estaEnOtraAula = (equipo) => {
+        if (selectedEquipos.length === 0) return false;
+        const aulaDelEquipo = equipo.aula?._id || null;
+        return aulaDelEquipo !== aulaDeEquiposSeleccionados;
+    };
+
+    const handleToggle = (id, disponibilidad, equipo) => {
         // Solo permitir seleccionar si el equipo está disponible
         if (disponibilidad !== 'disponible') {
+            return;
+        }
+
+        // No permitir seleccionar si está en otra aula
+        if (estaEnOtraAula(equipo)) {
             return;
         }
 
@@ -28,10 +71,32 @@ export const AgregarEquipos = forwardRef(({ onSave, initialSelected = [], initia
         }
     };
 
-    const handleCantidadChange = (id, cantidad) => {
+    const handleIncrementCantidad = (id, cantidadMaxima) => {
+        setSelectedEquipos(selectedEquipos.map(item => {
+            if (item.equipo === id) {
+                const nuevaCantidad = item.cantidad + 1;
+                // No permitir exceder la cantidad máxima
+                return { ...item, cantidad: Math.min(nuevaCantidad, cantidadMaxima) };
+            }
+            return item;
+        }));
+    };
+
+    const handleDecrementCantidad = (id) => {
+        setSelectedEquipos(selectedEquipos.map(item => {
+            if (item.equipo === id) {
+                const nuevaCantidad = item.cantidad - 1;
+                // Mínimo 1
+                return { ...item, cantidad: Math.max(1, nuevaCantidad) };
+            }
+            return item;
+        }));
+    };
+
+    const handleCantidadChange = (id, cantidad, cantidadMaxima) => {
         const cantidadNum = parseInt(cantidad) || 1;
         setSelectedEquipos(selectedEquipos.map(item =>
-            item.equipo === id ? { ...item, cantidad: Math.max(1, cantidadNum) } : item
+            item.equipo === id ? { ...item, cantidad: Math.max(1, Math.min(cantidadNum, cantidadMaxima)) } : item
         ));
     };
 
@@ -50,20 +115,6 @@ export const AgregarEquipos = forwardRef(({ onSave, initialSelected = [], initia
         }
         ref.current?.close();
     };
-
-    // Obtener equipos con información del aula
-    const equiposConAula = equipos.map(equipo => {
-        // Buscar en qué aula está el equipo
-        const aulaDelEquipo = aulas.find(aula =>
-            Array.isArray(aula.equipos) && aula.equipos.some(e =>
-                (typeof e === 'object' && e._id === equipo._id) || e === equipo._id
-            )
-        );
-        return {
-            ...equipo,
-            aula: aulaDelEquipo || null
-        };
-    });
 
     // Agrupar equipos por aula
     const equiposPorAula = aulas.reduce((acc, aula) => {
@@ -126,28 +177,36 @@ export const AgregarEquipos = forwardRef(({ onSave, initialSelected = [], initia
                     <button className="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button>
                 </form>
                 <p className="text-sm text-gray-600 mb-4">
-                    Selecciona los equipos y/o aulas que deseas reservar.
+                    Selecciona <strong>equipos</strong> o un <strong>aula</strong> (no ambos).
                 </p>
 
                 {/* Tabs como botones con background */}
                 <div className="flex gap-2 mb-4">
                     <button
                         type="button"
-                        className={`btn flex-1 ${activeTab === 'equipos' 
-                            ? 'bg-primario text-white hover:bg-red-700' 
-                            : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
-                        onClick={() => setActiveTab('equipos')}
+                        className={`btn flex-1 ${selectedAula 
+                            ? 'btn-disabled bg-gray-300 text-gray-500 cursor-not-allowed' 
+                            : activeTab === 'equipos' 
+                                ? 'bg-primario text-white hover:bg-red-700' 
+                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+                        onClick={() => !selectedAula && setActiveTab('equipos')}
+                        disabled={!!selectedAula}
                     >
                         Equipos {selectedEquipos.length > 0 && `(${selectedEquipos.length})`}
+                        {selectedAula && <span className="ml-1 text-xs">(bloqueado)</span>}
                     </button>
                     <button
                         type="button"
-                        className={`btn flex-1 ${activeTab === 'aulas' 
-                            ? 'bg-primario text-white hover:bg-red-700' 
-                            : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
-                        onClick={() => setActiveTab('aulas')}
+                        className={`btn flex-1 ${selectedEquipos.length > 0 
+                            ? 'btn-disabled bg-gray-300 text-gray-500 cursor-not-allowed' 
+                            : activeTab === 'aulas' 
+                                ? 'bg-primario text-white hover:bg-red-700' 
+                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+                        onClick={() => selectedEquipos.length === 0 && setActiveTab('aulas')}
+                        disabled={selectedEquipos.length > 0}
                     >
                         Aulas {selectedAula && '(1)'}
+                        {selectedEquipos.length > 0 && <span className="ml-1 text-xs">(bloqueado)</span>}
                     </button>
                 </div>
 
@@ -214,13 +273,15 @@ export const AgregarEquipos = forwardRef(({ onSave, initialSelected = [], initia
                                                                 const estaDisponible = equipo.disponibilidad === 'disponible';
                                                                 const equipoSeleccionado = selectedEquipos.find(item => item.equipo === equipo._id);
                                                                 const estaSeleccionado = !!equipoSeleccionado;
+                                                                const bloqueadoPorOtraAula = estaEnOtraAula(equipo);
+                                                                const deshabilitado = !estaDisponible || bloqueadoPorOtraAula;
 
                                                                 return (
                                                                     <div
                                                                         key={equipo._id}
-                                                                        className={`p-3 rounded border ${estaDisponible
-                                                                                ? 'hover:bg-base-200'
-                                                                                : 'opacity-50 bg-gray-100'
+                                                                        className={`p-3 rounded border ${deshabilitado
+                                                                                ? 'opacity-50 bg-gray-100'
+                                                                                : 'hover:bg-base-200'
                                                                             }`}
                                                                     >
                                                                         <div className="flex items-center gap-3">
@@ -228,30 +289,57 @@ export const AgregarEquipos = forwardRef(({ onSave, initialSelected = [], initia
                                                                                 type="checkbox"
                                                                                 className="checkbox checkbox-primary"
                                                                                 checked={estaSeleccionado}
-                                                                                onChange={() => handleToggle(equipo._id, equipo.disponibilidad)}
-                                                                                disabled={!estaDisponible}
+                                                                                onChange={() => handleToggle(equipo._id, equipo.disponibilidad, equipo)}
+                                                                                disabled={deshabilitado}
                                                                             />
                                                                             <div className="flex-1">
                                                                                 <div className="font-medium">{equipo.name || equipo.nombre || "Equipo sin nombre"}</div>
-                                                                                <div className={`text-xs ${estaDisponible ? 'text-green-600' : 'text-red-600'}`}>
-                                                                                    {equipo.disponibilidad === 'disponible' ? 'Disponible' :
+                                                                                <div className={`text-xs ${bloqueadoPorOtraAula ? 'text-orange-600' : estaDisponible ? 'text-green-600' : 'text-red-600'}`}>
+                                                                                    {bloqueadoPorOtraAula ? 'Bloqueado (otra aula seleccionada)' :
+                                                                                        equipo.disponibilidad === 'disponible' ? 'Disponible' :
                                                                                         equipo.disponibilidad === 'ocupado' ? 'Ocupado' :
                                                                                             equipo.disponibilidad === 'en mantenimiento' ? 'En mantenimiento' :
                                                                                                 'No disponible'}
                                                                                 </div>
                                                                             </div>
-                                                                            {estaSeleccionado && (
-                                                                                <div className="flex items-center gap-2">
-                                                                                    <label className="text-sm font-medium">Cantidad:</label>
-                                                                                    <input
-                                                                                        type="number"
-                                                                                        min="1"
-                                                                                        value={equipoSeleccionado.cantidad}
-                                                                                        onChange={(e) => handleCantidadChange(equipo._id, e.target.value)}
-                                                                                        className="input input-bordered input-sm w-20"
-                                                                                    />
+                                                                            {estaSeleccionado && (() => {
+                                                                            const cantidadMaxima = getCantidadMaxima(equipo);
+                                                                            const cantidadActual = equipoSeleccionado.cantidad;
+                                                                            return (
+                                                                                <div className="flex flex-col items-end gap-1">
+                                                                                    <div className="flex items-center gap-1">
+                                                                                        <button
+                                                                                            type="button"
+                                                                                            onClick={(e) => {
+                                                                                                e.stopPropagation();
+                                                                                                handleDecrementCantidad(equipo._id);
+                                                                                            }}
+                                                                                            disabled={cantidadActual <= 1}
+                                                                                            className={`btn btn-sm btn-circle ${cantidadActual <= 1 ? 'btn-disabled bg-gray-200' : 'bg-primario hover:bg-red-700 text-white'}`}
+                                                                                        >
+                                                                                            <FaMinus className="w-3 h-3" />
+                                                                                        </button>
+                                                                                        <span className="w-10 text-center font-semibold text-lg">
+                                                                                            {cantidadActual}
+                                                                                        </span>
+                                                                                        <button
+                                                                                            type="button"
+                                                                                            onClick={(e) => {
+                                                                                                e.stopPropagation();
+                                                                                                handleIncrementCantidad(equipo._id, cantidadMaxima);
+                                                                                            }}
+                                                                                            disabled={cantidadActual >= cantidadMaxima}
+                                                                                            className={`btn btn-sm btn-circle ${cantidadActual >= cantidadMaxima ? 'btn-disabled bg-gray-200' : 'bg-primario hover:bg-red-700 text-white'}`}
+                                                                                        >
+                                                                                            <FaPlus className="w-3 h-3" />
+                                                                                        </button>
+                                                                                    </div>
+                                                                                    <span className="text-xs text-gray-500">
+                                                                                        Máx: {cantidadMaxima}
+                                                                                    </span>
                                                                                 </div>
-                                                                            )}
+                                                                            );
+                                                                        })()}
                                                                         </div>
                                                                     </div>
                                                                 );
@@ -272,13 +360,15 @@ export const AgregarEquipos = forwardRef(({ onSave, initialSelected = [], initia
                                                             const estaDisponible = equipo.disponibilidad === 'disponible';
                                                             const equipoSeleccionado = selectedEquipos.find(item => item.equipo === equipo._id);
                                                             const estaSeleccionado = !!equipoSeleccionado;
+                                                            const bloqueadoPorOtraAula = estaEnOtraAula(equipo);
+                                                            const deshabilitado = !estaDisponible || bloqueadoPorOtraAula;
 
                                                             return (
                                                                 <div
                                                                     key={equipo._id}
-                                                                    className={`p-3 rounded border ${estaDisponible
-                                                                            ? 'hover:bg-base-200'
-                                                                            : 'opacity-50 bg-gray-100'
+                                                                    className={`p-3 rounded border ${deshabilitado
+                                                                            ? 'opacity-50 bg-gray-100'
+                                                                            : 'hover:bg-base-200'
                                                                         }`}
                                                                 >
                                                                     <div className="flex items-center gap-3">
@@ -286,30 +376,57 @@ export const AgregarEquipos = forwardRef(({ onSave, initialSelected = [], initia
                                                                             type="checkbox"
                                                                             className="checkbox checkbox-primary"
                                                                             checked={estaSeleccionado}
-                                                                            onChange={() => handleToggle(equipo._id, equipo.disponibilidad)}
-                                                                            disabled={!estaDisponible}
+                                                                            onChange={() => handleToggle(equipo._id, equipo.disponibilidad, equipo)}
+                                                                            disabled={deshabilitado}
                                                                         />
                                                                         <div className="flex-1">
                                                                             <div className="font-medium">{equipo.name || equipo.nombre || "Equipo sin nombre"}</div>
-                                                                            <div className={`text-xs ${estaDisponible ? 'text-green-600' : 'text-red-600'}`}>
-                                                                                {equipo.disponibilidad === 'disponible' ? 'Disponible' :
+                                                                            <div className={`text-xs ${bloqueadoPorOtraAula ? 'text-orange-600' : estaDisponible ? 'text-green-600' : 'text-red-600'}`}>
+                                                                                {bloqueadoPorOtraAula ? 'Bloqueado (otra aula seleccionada)' :
+                                                                                    equipo.disponibilidad === 'disponible' ? 'Disponible' :
                                                                                     equipo.disponibilidad === 'ocupado' ? 'Ocupado' :
                                                                                         equipo.disponibilidad === 'en mantenimiento' ? 'En mantenimiento' :
                                                                                             'No disponible'}
                                                                             </div>
                                                                         </div>
-                                                                        {estaSeleccionado && (
-                                                                            <div className="flex items-center gap-2">
-                                                                                <label className="text-sm font-medium">Cantidad:</label>
-                                                                                <input
-                                                                                    type="number"
-                                                                                    min="1"
-                                                                                    value={equipoSeleccionado.cantidad}
-                                                                                    onChange={(e) => handleCantidadChange(equipo._id, e.target.value)}
-                                                                                    className="input input-bordered input-sm w-20"
-                                                                                />
-                                                                            </div>
-                                                                        )}
+                                                                        {estaSeleccionado && (() => {
+                                                                            const cantidadMaxima = getCantidadMaxima(equipo);
+                                                                            const cantidadActual = equipoSeleccionado.cantidad;
+                                                                            return (
+                                                                                <div className="flex flex-col items-end gap-1">
+                                                                                    <div className="flex items-center gap-1">
+                                                                                        <button
+                                                                                            type="button"
+                                                                                            onClick={(e) => {
+                                                                                                e.stopPropagation();
+                                                                                                handleDecrementCantidad(equipo._id);
+                                                                                            }}
+                                                                                            disabled={cantidadActual <= 1}
+                                                                                            className={`btn btn-sm btn-circle ${cantidadActual <= 1 ? 'btn-disabled bg-gray-200' : 'bg-primario hover:bg-red-700 text-white'}`}
+                                                                                        >
+                                                                                            <FaMinus className="w-3 h-3" />
+                                                                                        </button>
+                                                                                        <span className="w-10 text-center font-semibold text-lg">
+                                                                                            {cantidadActual}
+                                                                                        </span>
+                                                                                        <button
+                                                                                            type="button"
+                                                                                            onClick={(e) => {
+                                                                                                e.stopPropagation();
+                                                                                                handleIncrementCantidad(equipo._id, cantidadMaxima);
+                                                                                            }}
+                                                                                            disabled={cantidadActual >= cantidadMaxima}
+                                                                                            className={`btn btn-sm btn-circle ${cantidadActual >= cantidadMaxima ? 'btn-disabled bg-gray-200' : 'bg-primario hover:bg-red-700 text-white'}`}
+                                                                                        >
+                                                                                            <FaPlus className="w-3 h-3" />
+                                                                                        </button>
+                                                                                    </div>
+                                                                                    <span className="text-xs text-gray-500">
+                                                                                        Máx: {cantidadMaxima}
+                                                                                    </span>
+                                                                                </div>
+                                                                            );
+                                                                        })()}
                                                                     </div>
                                                                 </div>
                                                             );
@@ -382,10 +499,17 @@ export const AgregarEquipos = forwardRef(({ onSave, initialSelected = [], initia
                         <span>{selectedAula ? '1 aula seleccionada' : 'Ninguna aula seleccionada'}</span>
                     </div>
                     
-                    {/* Nota informativa */}
-                    {selectedAula && selectedEquipos.length > 0 && (
-                        <div className="text-sm text-amber-600 bg-amber-50 p-2 rounded">
-                            Nota: Al seleccionar un aula, solo se enviará el aula (los equipos no se incluirán en la reserva).
+                    {/* Nota informativa cuando hay equipos seleccionados de un aula */}
+                    {selectedEquipos.length > 0 && aulaDeEquiposSeleccionados && (
+                        <div className="text-sm text-blue-600 bg-blue-50 p-2 rounded">
+                            Solo puedes seleccionar equipos del aula: <strong>{aulas.find(a => a._id === aulaDeEquiposSeleccionados)?.name || 'Sin ubicación'}</strong>
+                        </div>
+                    )}
+
+                    {/* Nota informativa cuando seleccionan equipos sin aula */}
+                    {selectedEquipos.length > 0 && !aulaDeEquiposSeleccionados && (
+                        <div className="text-sm text-blue-600 bg-blue-50 p-2 rounded">
+                            Solo puedes seleccionar equipos <strong>sin ubicación asignada</strong>
                         </div>
                     )}
                 </div>

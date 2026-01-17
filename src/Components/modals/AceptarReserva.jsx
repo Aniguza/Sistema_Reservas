@@ -2,6 +2,7 @@ import React, { forwardRef, useState } from 'react'
 import { FaPlus } from "react-icons/fa";
 import { useNavigate } from 'react-router';
 import { useToastActions } from '../../Context/ToastContext.jsx';
+import { FaExclamationTriangle } from 'react-icons/fa';
 
 export const AceptarReserva = forwardRef((props, ref) => {
     const { showSuccess, showError } = useToastActions();
@@ -64,7 +65,10 @@ export const AceptarReserva = forwardRef((props, ref) => {
                         <div>
                             <input type="checkbox" id="confirm-checkbox" className="checkbox checkbox-sm " />  <span className='text-gray-700 text-sm'>Acepto las condiciones y me comprometo al uso responsable</span>
                         </div>
-                        <p className='text-orange-700 text-sm text-center hidden' id='confirm'>Por favor confirma que has leído y aceptado las condiciones antes de continuar.</p>
+                        <div>
+                            <FaExclamationTriangle className='text-orange-700 text-2xl' />
+                            <p className='text-orange-700 text-sm font-bold text-center hidden' id='confirm'>Por favor confirma que has leído y aceptado las condiciones antes de continuar.</p>
+                        </div>
                         <button type='submit' className="btn bg-primario text-white hover:bg-red-700 border-none" onClick={handleReservar} disabled={isLoading}>
                             {isLoading ? <span className="loading loading-spinner loading-sm" aria-label="Creando reserva" /> : 'Reservar'}
                         </button>
