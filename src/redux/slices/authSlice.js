@@ -24,6 +24,8 @@ export const loginUser = createAsyncThunk(
             // Guardar token y datos del usuario
             localStorage.setItem('access_token', data.access_token);
             localStorage.setItem('user', JSON.stringify(data.usuario));
+            // Guardar timestamp de última actividad al iniciar sesión
+            localStorage.setItem('lastActivity', Date.now().toString());
             return data;
         } catch (error) {
             return rejectWithValue(error.message);
@@ -38,6 +40,7 @@ export const logoutUser = createAsyncThunk(
         try {
             localStorage.removeItem('access_token');
             localStorage.removeItem('user');
+            localStorage.removeItem('lastActivity');
             return true;
         } catch (error) {
             return rejectWithValue(error.message);

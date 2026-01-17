@@ -11,6 +11,7 @@ export const Header = () => {
     const handleLogout = () => {
         localStorage.removeItem('access_token');
         localStorage.removeItem('user');
+        localStorage.removeItem('lastActivity');
         navigate('/login');
         window.location.reload(); // Para actualizar el estado del header
     };

@@ -44,6 +44,7 @@ export const ReservaForm = () => {
 
   const [companeros, setCompaneros] = useState([]);
   const [equipos, setEquipos] = useState([]);
+  const [aulaSeleccionada, setAulaSeleccionada] = useState(null);
   const [correoInput, setCorreoInput] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [isDocente, setIsDocente] = useState(false);
@@ -154,14 +155,14 @@ export const ReservaForm = () => {
     };
   }, [propositoDropdownOpen]);
 
-  // Validación en tiempo real cuando cambian fecha, hora o equipos
+  // Validación en tiempo real cuando cambian fecha, hora o equipos/aula
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       validarEnTiempoReal();
     }, 500); // Debounce de 500ms para evitar llamadas excesivas
 
     return () => clearTimeout(timeoutId);
-  }, [formData.fecha, formData.horaInicio, formData.horaFin, equipos, formData.correo]);
+  }, [formData.fecha, formData.horaInicio, formData.horaFin, equipos, aulaSeleccionada, formData.correo]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -290,10 +291,24 @@ export const ReservaForm = () => {
     });
   };
 
-  const handleSaveEquipos = (selectedEquipos) => {
-    // selectedEquipos ya viene en formato { equipo: id, cantidad: num }
-    const equiposConAula = getEquiposConAula(selectedEquipos);
-    setEquipos(equiposConAula);
+  const handleSaveEquipos = (selectedEquipos, selectedAula) => {
+    // Si hay un aula seleccionada, guardamos el aula y limpiamos equipos
+    if (selectedAula) {
+      setAulaSeleccionada(selectedAula);
+      setEquipos([]);
+    } else {
+      // Si no hay aula, guardamos los equipos
+      setAulaSeleccionada(null);
+      const equiposConAula = getEquiposConAula(selectedEquipos);
+      setEquipos(equiposConAula);
+    }
+  };
+
+  // Obtener nombre del aula seleccionada
+  const getNombreAulaSeleccionada = () => {
+    if (!aulaSeleccionada) return '';
+    const aula = aulas.find(a => a._id === aulaSeleccionada);
+    return aula ? aula.name : 'Aula seleccionada';
   };
 
   const toggleDocenteDropdown = () => {
@@ -357,7 +372,8 @@ export const ReservaForm = () => {
   // Función para validación en tiempo real de fecha/hora/equipos
   const validarEnTiempoReal = async () => {
     // Solo validar si tenemos todos los datos necesarios
-    if (!formData.fecha || !formData.horaInicio || !formData.horaFin || !formData.correo || equipos.length === 0) {
+    const tieneRecurso = equipos.length > 0 || aulaSeleccionada;
+    if (!formData.fecha || !formData.horaInicio || !formData.horaFin || !formData.correo || !tieneRecurso) {
       setValidacionTiempoReal({ validando: false, mensaje: null, tipo: null });
       return;
     }
@@ -381,6 +397,12 @@ export const ReservaForm = () => {
       const fechaISO = fechaConHora.toISOString();
 
       const token = localStorage.getItem('access_token');
+      
+      // Construir las aulas a validar
+      const aulasAValidar = aulaSeleccionada 
+        ? [aulaSeleccionada] 
+        : [...new Set(equipos.map(eq => eq.aula).filter(aula => aula !== null))];
+      
       const response = await fetch(buildUrl(API_ENDPOINTS.reservas.disponibilidad), {
         method: 'POST',
         headers: {
@@ -388,8 +410,8 @@ export const ReservaForm = () => {
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
-          equipos: equipos,
-          aulas: [...new Set(equipos.map(eq => eq.aula).filter(aula => aula !== null))],
+          equipos: aulaSeleccionada ? [] : equipos,
+          aulas: aulasAValidar,
           fecha: fechaISO,
           horaInicio: formData.horaInicio,
           horaFin: formData.horaFin,
@@ -426,7 +448,8 @@ export const ReservaForm = () => {
     e.preventDefault();
 
     // Validación simple de campos requeridos antes de abrir el modal
-    if (!formData.nombre || !formData.correo || !formData.fecha || !formData.horaInicio || !formData.horaFin || equipos.length === 0 || (!isDocente && !selectedDocente)) {
+    const tieneRecurso = equipos.length > 0 || aulaSeleccionada;
+    if (!formData.nombre || !formData.correo || !formData.fecha || !formData.horaInicio || !formData.horaFin || !tieneRecurso || (!isDocente && !selectedDocente)) {
       showToast('Por favor, completa todos los campos obligatorios', 'error');
       return;
     }
@@ -473,6 +496,12 @@ export const ReservaForm = () => {
     try {
       setValidandoDisponibilidad(true);
       const token = localStorage.getItem('access_token');
+      
+      // Construir las aulas a validar
+      const aulasAValidar = aulaSeleccionada 
+        ? [aulaSeleccionada] 
+        : [...new Set(equipos.map(eq => eq.aula).filter(aula => aula !== null))];
+      
       const disponibilidadResponse = await fetch(buildUrl(API_ENDPOINTS.reservas.disponibilidad), {
         method: 'POST',
         headers: {
@@ -480,8 +509,8 @@ export const ReservaForm = () => {
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
-          equipos: equipos,
-          aulas: [...new Set(equipos.map(eq => eq.aula).filter(aula => aula !== null))],
+          equipos: aulaSeleccionada ? [] : equipos,
+          aulas: aulasAValidar,
           fecha: fechaISO,
           horaInicio: formData.horaInicio,
           horaFin: formData.horaFin,
@@ -508,8 +537,9 @@ export const ReservaForm = () => {
       nombre: formData.nombre,
       correo: formData.correo,
       companeros: companeros,
-      equipos: equipos, // Ya viene en formato [{ equipo: id, cantidad: num }]
-      tipo: formData.tipo,
+      equipos: aulaSeleccionada ? [] : equipos, // Si hay aula, no enviamos equipos
+      aula: aulaSeleccionada || null, // Enviamos el aula si está seleccionada
+      tipo: aulaSeleccionada ? 'aula' : formData.tipo,
       fecha: fechaISO,
       horaInicio: formData.horaInicio,
       horaFin: formData.horaFin,
@@ -537,6 +567,7 @@ export const ReservaForm = () => {
       });
       setCompaneros([]);
       setEquipos([]);
+      setAulaSeleccionada(null);
       setCorreoInput('');
       setIsDocente(false);
       resetTiempos();
@@ -795,9 +826,15 @@ export const ReservaForm = () => {
                     <input
                       type="text"
                       readOnly
-                      value={equipos.length > 0 ? `${equipos.length} equipos (${equipos.reduce((total, eq) => total + eq.cantidad, 0)} unidades)` : ''}
+                      value={
+                        aulaSeleccionada 
+                          ? `Aula: ${getNombreAulaSeleccionada()}` 
+                          : equipos.length > 0 
+                            ? `${equipos.length} equipos (${equipos.reduce((total, eq) => total + eq.cantidad, 0)} unidades)` 
+                            : ''
+                      }
                       className="input campos pr-12 z-1 cursor-pointer"
-                      placeholder="Seleccionar equipos"
+                      placeholder="Seleccionar equipos o aula"
                       onClick={abrirModalEquipos}
                       required
                     />
@@ -930,7 +967,7 @@ export const ReservaForm = () => {
 
         {/* Modal de códigos */}
         <AgregarCompañeros ref={AgregarCompañerosRef} onSave={handleSaveCompaneros} initialCodes={companeros} />
-        <AgregarEquipos ref={AgregarEquiposRef} onSave={handleSaveEquipos} initialSelected={equipos} />
+        <AgregarEquipos ref={AgregarEquiposRef} onSave={handleSaveEquipos} initialSelected={equipos} initialSelectedAula={aulaSeleccionada} />
         <AceptarReserva ref={AceptarReservaRef} onConfirm={handleConfirmReserva} onTimeRegister={registrarTiempoFinal} />
       </section>
 

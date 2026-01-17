@@ -7,6 +7,7 @@ import { Header } from './Components/Header.jsx';
 import { ToastProvider } from './Context/ToastContext.jsx';
 import { PerformanceMonitor } from './utils/performance.jsx';
 import { DataLoader } from './Components/DataLoader.jsx';
+import { SessionTimeout } from './Components/SessionTimeout.jsx';
 
 //Pages - Lazy Loading para reducir el bundle inicial
 const Inicio = lazy(() => import('./Pages/Inicio.jsx').then(module => ({ default: module.Inicio })));
@@ -35,6 +36,7 @@ export default function App() {
       <DataLoader />
       <PerformanceMonitor />
       <Router >
+        <SessionTimeout />
         <div className="grid grid-rows-[auto_1fr_auto] min-h-screen">
           <Header />
           <div className="w-full flex justify-center">
