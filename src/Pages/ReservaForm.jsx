@@ -793,7 +793,7 @@ export const ReservaForm = () => {
                                 aria-selected={isSelected}
                                 onClick={() => handleSelectDocente(docente)}
                               >
-                                {`${docente.nombre || 'Docente'} - ${docente.correo || 'Sin correo'}`}
+                                {`${docente.nombre || 'Docente'}`}
                               </button>
                             </li>
                           );
