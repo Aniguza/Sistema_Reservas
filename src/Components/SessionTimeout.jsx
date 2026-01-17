@@ -18,7 +18,8 @@ export const SessionTimeout = () => {
     const updateLastActivity = () => {
         const now = Date.now();
         lastActivityRef.current = now;
-        localStorage.setItem('lastActivity', now.toString());
+        // Usar sessionStorage en lugar de localStorage para que sea interno
+        sessionStorage.setItem('lastActivity', now.toString());
     };
 
     const handleLogout = async () => {
@@ -33,11 +34,8 @@ export const SessionTimeout = () => {
         // Mostrar mensaje informativo
         showInfo('Tu sesión ha expirado por inactividad. Por favor, inicia sesión nuevamente.', 5000);
 
-        // Cerrar sesión
+        // Cerrar sesión (logoutUser ya limpia todo el localStorage)
         await dispatch(logoutUser());
-        
-        // Limpiar localStorage
-        localStorage.removeItem('lastActivity');
         
         // Redirigir al login
         navigate('/login');
@@ -56,7 +54,7 @@ export const SessionTimeout = () => {
             return;
         }
 
-        const lastActivity = localStorage.getItem('lastActivity');
+        const lastActivity = sessionStorage.getItem('lastActivity');
         const now = Date.now();
         
         if (lastActivity) {
@@ -107,7 +105,7 @@ export const SessionTimeout = () => {
 
         // Función para configurar el timeout inicial basado en el tiempo restante
         const setupInitialTimeout = () => {
-            const lastActivity = localStorage.getItem('lastActivity');
+            const lastActivity = sessionStorage.getItem('lastActivity');
             const now = Date.now();
             
             if (lastActivity) {

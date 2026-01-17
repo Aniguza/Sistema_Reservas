@@ -24,8 +24,8 @@ export const loginUser = createAsyncThunk(
             // Guardar token y datos del usuario
             localStorage.setItem('access_token', data.access_token);
             localStorage.setItem('user', JSON.stringify(data.usuario));
-            // Guardar timestamp de última actividad al iniciar sesión
-            localStorage.setItem('lastActivity', Date.now().toString());
+            // Guardar timestamp de última actividad al iniciar sesión (usando sessionStorage para que sea interno)
+            sessionStorage.setItem('lastActivity', Date.now().toString());
             return data;
         } catch (error) {
             return rejectWithValue(error.message);
@@ -40,7 +40,7 @@ export const logoutUser = createAsyncThunk(
         try {
             localStorage.removeItem('access_token');
             localStorage.removeItem('user');
-            localStorage.removeItem('lastActivity');
+            sessionStorage.removeItem('lastActivity');
             return true;
         } catch (error) {
             return rejectWithValue(error.message);
@@ -69,6 +69,7 @@ export const fetchUserProfile = createAsyncThunk(
                 if (response.status === 401) {
                     localStorage.removeItem('access_token');
                     localStorage.removeItem('user');
+                    sessionStorage.removeItem('lastActivity');
                     return rejectWithValue('Sesión expirada. Inicia sesión nuevamente.');
                 }
                 throw new Error('Error al cargar el perfil');

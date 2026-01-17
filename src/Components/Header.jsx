@@ -3,15 +3,16 @@ import { Link, useNavigate } from 'react-router'
 import { Menu } from './Menu.jsx';
 import { GiHamburgerMenu } from "react-icons/gi";
 import { useDispatch, useSelector } from 'react-redux';
+import { logoutUser } from '../redux/slices/authSlice';
 
 
 export const Header = () => {
     const navigate = useNavigate();
+    const dispatch = useDispatch();
 
-    const handleLogout = () => {
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('user');
-        localStorage.removeItem('lastActivity');
+    const handleLogout = async () => {
+        // Usar logoutUser de Redux para mantener consistencia
+        await dispatch(logoutUser());
         navigate('/login');
         window.location.reload(); // Para actualizar el estado del header
     };
