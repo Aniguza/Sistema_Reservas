@@ -23,7 +23,9 @@ export const Register = () => {
 
   const handleChange = (event) => {
     const { name, value } = event.target;
-    setFormValues((prev) => ({ ...prev, [name]: value }));
+    // Convertir correo a minúsculas automáticamente
+    const finalValue = name === 'correo' ? value.toLowerCase() : value;
+    setFormValues((prev) => ({ ...prev, [name]: finalValue }));
   };
 
   const validateForm = () => {

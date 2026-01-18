@@ -1,8 +1,11 @@
 import React, { useEffect, useState } from 'react'
-import { Link } from 'react-router'
+import { Link, useLocation } from 'react-router'
 import { buildUrl } from '../config/api.config.js'
+import { HiHome, HiCollection, HiCalendar } from "react-icons/hi";
 
-export const Menu = () => {
+export const Menu = ({ isMobile = false }) => {
+    const location = useLocation();
+    
     const handleMenuClick = () => {
         // Cerrar el drawer en móvil
         const drawerCheckbox = document.getElementById('my-drawer-3');
@@ -68,6 +71,64 @@ export const Menu = () => {
         return 'Deshabilitado';
     };
 
+    const isActive = (path) => location.pathname === path;
+
+    // Menú para móvil con íconos y mejor diseño
+    if (isMobile) {
+        return (
+            <nav className="flex flex-col gap-2 w-full">
+                <Link 
+                    to="/" 
+                    className={`mobile-menu-item group ${isActive('/') ? 'mobile-menu-item-active' : ''}`}
+                    onClick={handleMenuClick}
+                >
+                    <span className={`mobile-menu-icon ${isActive('/') ? 'bg-primario text-white' : 'bg-baseRojo text-primario group-hover:bg-primario group-hover:text-white'}`}>
+                        <HiHome className="w-5 h-5" />
+                    </span>
+                    <span className="mobile-menu-text">Inicio</span>
+                </Link>
+
+                <Link 
+                    to="/catalogo" 
+                    className={`mobile-menu-item group ${isActive('/catalogo') ? 'mobile-menu-item-active' : ''}`}
+                    onClick={handleMenuClick}
+                >
+                    <span className={`mobile-menu-icon ${isActive('/catalogo') ? 'bg-primario text-white' : 'bg-baseRojo text-primario group-hover:bg-primario group-hover:text-white'}`}>
+                        <HiCollection className="w-5 h-5" />
+                    </span>
+                    <span className="mobile-menu-text">Recursos</span>
+                </Link>
+
+                {disabledInfo && disabledInfo.deshabilitado ? (
+                    <div
+                        className="mobile-menu-item opacity-50 cursor-not-allowed"
+                        title={formatReason(disabledInfo)}
+                    >
+                        <span className="mobile-menu-icon bg-gray-200 text-gray-400">
+                            <HiCalendar className="w-5 h-5" />
+                        </span>
+                        <div className="flex flex-col">
+                            <span className="mobile-menu-text text-gray-400">Reservar</span>
+                            <span className="text-xs text-gray-400">No disponible</span>
+                        </div>
+                    </div>
+                ) : (
+                    <Link 
+                        to="/reservas" 
+                        className={`mobile-menu-item group ${isActive('/reservas') ? 'mobile-menu-item-active' : ''}`}
+                        onClick={handleMenuClick}
+                    >
+                        <span className={`mobile-menu-icon ${isActive('/reservas') ? 'bg-primario text-white' : 'bg-baseRojo text-primario group-hover:bg-primario group-hover:text-white'}`}>
+                            <HiCalendar className="w-5 h-5" />
+                        </span>
+                        <span className="mobile-menu-text">Reservar</span>
+                    </Link>
+                )}
+            </nav>
+        );
+    }
+
+    // Menú para desktop (sin cambios)
     return (
         <>
             <Link to="/" className="menuItem" onClick={handleMenuClick}>Inicio</Link>

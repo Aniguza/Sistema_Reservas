@@ -41,6 +41,24 @@
   @apply font-bold font-lato text-[16px];
 }
 
+/* Mobile Menu Styles */
+.mobile-menu-item {
+  @apply flex items-center gap-4 p-3 rounded-xl transition-all duration-200 ease-in-out;
+  @apply hover:bg-baseRojo/50 cursor-pointer;
+}
+
+.mobile-menu-item-active {
+  @apply bg-baseRojo;
+}
+
+.mobile-menu-icon {
+  @apply w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-200;
+}
+
+.mobile-menu-text {
+  @apply font-semibold text-base text-negro;
+}
+
 /* Estilos para contenido HTML de Quill */
 .prose {
   /* Encabezados */

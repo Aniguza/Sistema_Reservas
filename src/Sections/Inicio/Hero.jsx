@@ -15,7 +15,7 @@ export const Hero = () => {
             <div className="hero-overlay"></div>
             <div className="hero-content text-neutral-content text-center px-4">
                 <div className="max-w-4xl">
-                    <h1 className="mb-5 text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-[90px] font-bold leading-tight">
+                    <h1 className="mb-5 text-3xl sm:text-4xl md:text-6xl lg:text-6xl xl:text-[70px] font-bold leading-tight">|
                         RESERVA DE EQUIPOS DE LABORATORIO
                     </h1>
                     <p className="mb-5 text-base sm:text-lg md:text-xl lg:text-2xl px-4">
