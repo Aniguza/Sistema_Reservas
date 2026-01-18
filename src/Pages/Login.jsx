@@ -75,7 +75,7 @@ export const Login = () => {
             required
             name="email"
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(e) => setEmail(e.target.value.toLowerCase())}
             disabled={isLoading}
           />
           <div className="relative">

@@ -2,17 +2,17 @@ import React from 'react'
 import { Link, useNavigate } from 'react-router'
 import { Menu } from './Menu.jsx';
 import { GiHamburgerMenu } from "react-icons/gi";
-import { useDispatch, useSelector } from 'react-redux';
-import { logoutUser } from '../redux/slices/authSlice';
+import { HiX } from "react-icons/hi";
+import { useSelector } from 'react-redux';
 
 
 export const Header = () => {
     const navigate = useNavigate();
-    const dispatch = useDispatch();
 
-    const handleLogout = async () => {
-        // Usar logoutUser de Redux para mantener consistencia
-        await dispatch(logoutUser());
+    const handleLogout = () => {
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('user');
+        localStorage.removeItem('lastActivity');
         navigate('/login');
         window.location.reload(); // Para actualizar el estado del header
     };
@@ -33,12 +33,106 @@ export const Header = () => {
                     <div className="drawer lg:drawer-open" tabIndex="-1">
                         <input id="my-drawer-3" type="checkbox" className="drawer-toggle" />
 
-                        <div className="drawer-side">
-                            <label htmlFor="my-drawer-3" aria-label="close sidebar" className="drawer-overlay"></label>
-                            <ul className="menu bg-base-200 min-h-full w-80 p-4 ">
-                                {/* Sidebar content here */}
-                                <Menu />
-                            </ul>
+                        <div className="drawer-side z-50">
+                            <label htmlFor="my-drawer-3" aria-label="close sidebar" className="drawer-overlay bg-black/50"></label>
+                            <div className="bg-white min-h-full w-72 flex flex-col shadow-2xl">
+                                {/* Header del menú móvil */}
+                                <div className="flex items-center justify-between p-4 border-b border-gray-100">
+                                    <div className="flex items-center gap-3">
+                                        <span className="font-bold text-lg text-primario">Menú</span>
+                                    </div>
+                                    <label 
+                                        htmlFor="my-drawer-3" 
+                                        className="btn btn-ghost btn-sm btn-circle hover:bg-baseRojo"
+                                    >
+                                        <HiX className="h-5 w-5" />
+                                    </label>
+                                </div>
+                                
+                                {/* Contenido del menú */}
+                                <div className="flex-1 p-4">
+                                    <Menu isMobile={true} />
+                                </div>
+
+                                {/* Footer del menú móvil */}
+                                <div className="p-4 border-t border-gray-100">
+                                    {isLoggedIn ? (
+                                        <div className="flex flex-col gap-2">
+                                            <div className="flex items-center gap-3 p-2 bg-baseGris rounded-lg">
+                                                <div className="w-10 h-10 rounded-full bg-primario text-white flex items-center justify-center font-bold">
+                                                    {(() => {
+                                                        const user = JSON.parse(localStorage.getItem('user') || '{}');
+                                                        if (user.correo) return user.correo.charAt(0).toUpperCase();
+                                                        return 'U';
+                                                    })()}
+                                                </div>
+                                                <div className="flex-1">
+                                                    <p className="font-semibold text-sm">
+                                                        {(() => {
+                                                            // Primero intentar de Redux, luego de localStorage
+                                                            if (usuarioActual?.nombre) return usuarioActual.nombre.split(' ')[0];
+                                                            if (usuarioActual?.name) return usuarioActual.name.split(' ')[0];
+                                                            const user = JSON.parse(localStorage.getItem('user') || '{}');
+                                                            if (user.nombre) return user.nombre.split(' ')[0];
+                                                            if (user.name) return user.name.split(' ')[0];
+                                                            return 'Usuario';
+                                                        })()}
+                                                    </p>
+                                                    <p className="text-xs text-gray-500 truncate">
+                                                        {(() => {
+                                                            const user = JSON.parse(localStorage.getItem('user') || '{}');
+                                                            return user.correo || '';
+                                                        })()}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <div className="flex gap-2">
+                                                <Link 
+                                                    to="/perfil" 
+                                                    className="flex-1 btn btn-sm bg-baseGris border-none hover:bg-gray-200"
+                                                    onClick={() => {
+                                                        const drawerCheckbox = document.getElementById('my-drawer-3');
+                                                        if (drawerCheckbox) drawerCheckbox.checked = false;
+                                                    }}
+                                                >
+                                                    Perfil
+                                                </Link>
+                                                <Link 
+                                                    to="/mis-reservas" 
+                                                    className="flex-1 btn btn-sm bg-baseGris border-none hover:bg-gray-200"
+                                                    onClick={() => {
+                                                        const drawerCheckbox = document.getElementById('my-drawer-3');
+                                                        if (drawerCheckbox) drawerCheckbox.checked = false;
+                                                    }}
+                                                >
+                                                    Reservas
+                                                </Link>
+                                            </div>
+                                            <button 
+                                                onClick={() => {
+                                                    handleLogout();
+                                                    const drawerCheckbox = document.getElementById('my-drawer-3');
+                                                    if (drawerCheckbox) drawerCheckbox.checked = false;
+                                                }}
+                                                className="btn btn-sm bg-primario text-white border-none hover:bg-primario/90 w-full"
+                                            >
+                                                Cerrar Sesión
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <Link 
+                                            to="/login" 
+                                            className="btn bg-primario text-white border-none hover:bg-primario/90 w-full"
+                                            onClick={() => {
+                                                const drawerCheckbox = document.getElementById('my-drawer-3');
+                                                if (drawerCheckbox) drawerCheckbox.checked = false;
+                                            }}
+                                        >
+                                            Iniciar Sesión
+                                        </Link>
+                                    )}
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -69,7 +163,14 @@ export const Header = () => {
                                     tabIndex="-1"
                                     className="menu menu-sm dropdown-content bg-base-100 rounded-box z-1 mt-3 w-52 p-2 shadow">
                                         <li className='p-3 justify-start border-none hover:bg-[#fff]'>
-                                            Hola {usuarioActual ? ((usuarioActual.nombre || usuarioActual.name || 'Usuario').split(' ')[0]) : 'Usuario'}
+                                            Hola {(() => {
+                                                if (usuarioActual?.nombre) return usuarioActual.nombre.split(' ')[0];
+                                                if (usuarioActual?.name) return usuarioActual.name.split(' ')[0];
+                                                const user = JSON.parse(localStorage.getItem('user') || '{}');
+                                                if (user.nombre) return user.nombre.split(' ')[0];
+                                                if (user.name) return user.name.split(' ')[0];
+                                                return 'Usuario';
+                                            })()}
                                         </li>
                                     <li>
                                         <Link
