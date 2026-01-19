@@ -1,8 +1,10 @@
-import React, { forwardRef, useState } from 'react'
+import React, { forwardRef, useState, useEffect, useCallback } from 'react'
 import { FaSearch, FaMinus, FaPlus } from "react-icons/fa";
 import { useInitialData } from '../../hooks/useInitialData';
+import { buildUrl } from '../../config/api.config';
+import { API_ENDPOINTS } from '../../config/endpoints.config';
 
-export const AgregarEquipos = forwardRef(({ onSave, initialSelected = [], initialSelectedAula = null }, ref) => {
+export const AgregarEquipos = forwardRef(({ onSave, initialSelected = [], initialSelectedAula = null, fechaReserva, horaInicio, horaFin }, ref) => {
     const { equipos, aulas, isLoading: loading, error } = useInitialData();
     // selectedEquipos ahora es un array de objetos: [{ equipo: id, cantidad: num }]
     const [selectedEquipos, setSelectedEquipos] = useState(initialSelected);
@@ -11,6 +13,85 @@ export const AgregarEquipos = forwardRef(({ onSave, initialSelected = [], initia
     const [busqueda, setBusqueda] = useState('');
     const [filtroAula, setFiltroAula] = useState('Todas');
     const [activeTab, setActiveTab] = useState('equipos'); // 'equipos' o 'aulas'
+    
+    // Estado para almacenar las cantidades ocupadas por equipo en el horario seleccionado
+    const [cantidadesOcupadas, setCantidadesOcupadas] = useState({});
+    const [cargandoDisponibilidad, setCargandoDisponibilidad] = useState(false);
+
+    // Función para verificar si dos rangos de hora se solapan
+    const horariosSeSuperponen = (inicio1, fin1, inicio2, fin2) => {
+        return inicio1 < fin2 && fin1 > inicio2;
+    };
+
+    // Consultar reservas y calcular disponibilidad real para la fecha/hora seleccionada
+    const consultarDisponibilidadReal = useCallback(async () => {
+        if (!fechaReserva || !horaInicio || !horaFin) {
+            setCantidadesOcupadas({});
+            return;
+        }
+
+        try {
+            setCargandoDisponibilidad(true);
+            const token = localStorage.getItem('access_token');
+            
+            // Obtener todas las reservas
+            const response = await fetch(buildUrl(API_ENDPOINTS.reservas.base), {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (!response.ok) {
+                console.error('Error al consultar reservas');
+                return;
+            }
+
+            const reservas = await response.json();
+            
+            // Filtrar reservas que:
+            // 1. Están confirmadas
+            // 2. Son para la misma fecha
+            // 3. Se superponen con el horario seleccionado
+            const fechaSeleccionada = new Date(fechaReserva + 'T00:00:00');
+            
+            const reservasConflicto = reservas.filter(reserva => {
+                // Solo reservas confirmadas
+                if (reserva.estado !== 'confirmada') return false;
+                
+                // Verificar misma fecha
+                const fechaReservaExistente = new Date(reserva.fecha);
+                if (fechaReservaExistente.toDateString() !== fechaSeleccionada.toDateString()) return false;
+                
+                // Verificar superposición de horarios
+                return horariosSeSuperponen(horaInicio, horaFin, reserva.horaInicio, reserva.horaFin);
+            });
+
+            // Calcular cantidades ocupadas por equipo
+            const ocupadas = {};
+            reservasConflicto.forEach(reserva => {
+                if (Array.isArray(reserva.equipos)) {
+                    reserva.equipos.forEach(eq => {
+                        const equipoId = typeof eq === 'object' ? (eq.equipo || eq._id) : eq;
+                        const cantidad = typeof eq === 'object' ? (eq.cantidad || 1) : 1;
+                        ocupadas[equipoId] = (ocupadas[equipoId] || 0) + cantidad;
+                    });
+                }
+            });
+
+            setCantidadesOcupadas(ocupadas);
+        } catch (error) {
+            console.error('Error al consultar disponibilidad:', error);
+        } finally {
+            setCargandoDisponibilidad(false);
+        }
+    }, [fechaReserva, horaInicio, horaFin]);
+
+    // Ejecutar consulta cuando cambian fecha/hora
+    useEffect(() => {
+        consultarDisponibilidadReal();
+    }, [consultarDisponibilidadReal]);
 
     // Obtener equipos con información del aula (debe estar antes de las funciones que lo usan)
     const equiposConAula = equipos.map(equipo => {
@@ -26,10 +107,31 @@ export const AgregarEquipos = forwardRef(({ onSave, initialSelected = [], initia
         };
     });
 
-    // Obtener la cantidad máxima disponible de un equipo
-    const getCantidadMaxima = (equipo) => {
+    // Obtener la cantidad total de un equipo
+    const getCantidadTotal = (equipo) => {
         // El campo viene como 'quantity' desde la API
         return equipo.quantity || equipo.cantidad || equipo.stock || 1;
+    };
+
+    // Obtener la cantidad disponible real de un equipo (considerando reservas en el horario)
+    const getCantidadDisponible = (equipo) => {
+        const cantidadTotal = getCantidadTotal(equipo);
+        const cantidadOcupada = cantidadesOcupadas[equipo._id] || 0;
+        return Math.max(0, cantidadTotal - cantidadOcupada);
+    };
+
+    // Verificar si un equipo está disponible para el horario seleccionado
+    const estaDisponibleParaHorario = (equipo) => {
+        // Si el equipo está en mantenimiento o tiene otro estado no disponible, no está disponible
+        if (equipo.disponibilidad === 'en mantenimiento') return false;
+        
+        // Si no hay fecha/hora seleccionada, usar el campo disponibilidad del equipo
+        if (!fechaReserva || !horaInicio || !horaFin) {
+            return equipo.disponibilidad === 'disponible';
+        }
+        
+        // Verificar si hay cantidad disponible para el horario
+        return getCantidadDisponible(equipo) > 0;
     };
 
     // Obtener el aula de un equipo por su ID
@@ -50,9 +152,9 @@ export const AgregarEquipos = forwardRef(({ onSave, initialSelected = [], initia
         return aulaDelEquipo !== aulaDeEquiposSeleccionados;
     };
 
-    const handleToggle = (id, disponibilidad, equipo) => {
-        // Solo permitir seleccionar si el equipo está disponible
-        if (disponibilidad !== 'disponible') {
+    const handleToggle = (id, equipo) => {
+        // Solo permitir seleccionar si el equipo está disponible para el horario
+        if (!estaDisponibleParaHorario(equipo)) {
             return;
         }
 
@@ -71,12 +173,12 @@ export const AgregarEquipos = forwardRef(({ onSave, initialSelected = [], initia
         }
     };
 
-    const handleIncrementCantidad = (id, cantidadMaxima) => {
+    const handleIncrementCantidad = (id, cantidadDisponible) => {
         setSelectedEquipos(selectedEquipos.map(item => {
             if (item.equipo === id) {
                 const nuevaCantidad = item.cantidad + 1;
-                // No permitir exceder la cantidad máxima
-                return { ...item, cantidad: Math.min(nuevaCantidad, cantidadMaxima) };
+                // No permitir exceder la cantidad disponible
+                return { ...item, cantidad: Math.min(nuevaCantidad, cantidadDisponible) };
             }
             return item;
         }));
@@ -93,10 +195,10 @@ export const AgregarEquipos = forwardRef(({ onSave, initialSelected = [], initia
         }));
     };
 
-    const handleCantidadChange = (id, cantidad, cantidadMaxima) => {
+    const handleCantidadChange = (id, cantidad, cantidadDisponible) => {
         const cantidadNum = parseInt(cantidad) || 1;
         setSelectedEquipos(selectedEquipos.map(item =>
-            item.equipo === id ? { ...item, cantidad: Math.max(1, Math.min(cantidadNum, cantidadMaxima)) } : item
+            item.equipo === id ? { ...item, cantidad: Math.max(1, Math.min(cantidadNum, cantidadDisponible)) } : item
         ));
     };
 
@@ -179,6 +281,21 @@ export const AgregarEquipos = forwardRef(({ onSave, initialSelected = [], initia
                 <p className="text-sm text-gray-600 mb-4">
                     Selecciona <strong>equipos</strong> o un <strong>aula</strong> (no ambos).
                 </p>
+                
+                {/* Aviso si no hay fecha/hora seleccionada */}
+                {(!fechaReserva || !horaInicio || !horaFin) && (
+                    <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 text-sm p-3 rounded-lg mb-4">
+                        Selecciona primero la <strong>fecha</strong> y <strong>hora</strong> de la reserva para ver la disponibilidad real de los equipos.
+                    </div>
+                )}
+                
+                {/* Indicador de carga de disponibilidad */}
+                {cargandoDisponibilidad && (
+                    <div className="bg-blue-50 border border-blue-200 text-blue-800 text-sm p-3 rounded-lg mb-4 flex items-center gap-2">
+                        <span className="loading loading-spinner loading-sm"></span>
+                        Verificando disponibilidad para el horario seleccionado...
+                    </div>
+                )}
 
                 {/* Tabs como botones con background */}
                 <div className="flex gap-2 mb-4">
@@ -270,11 +387,14 @@ export const AgregarEquipos = forwardRef(({ onSave, initialSelected = [], initia
                                                         </div>
                                                         <div className="grid grid-cols-1 gap-3">
                                                             {equiposFiltrados.map((equipo) => {
-                                                                const estaDisponible = equipo.disponibilidad === 'disponible';
+                                                                const estaDisponible = estaDisponibleParaHorario(equipo);
+                                                                const cantidadDisponible = getCantidadDisponible(equipo);
+                                                                const cantidadTotal = getCantidadTotal(equipo);
                                                                 const equipoSeleccionado = selectedEquipos.find(item => item.equipo === equipo._id);
                                                                 const estaSeleccionado = !!equipoSeleccionado;
                                                                 const bloqueadoPorOtraAula = estaEnOtraAula(equipo);
                                                                 const deshabilitado = !estaDisponible || bloqueadoPorOtraAula;
+                                                                const enMantenimiento = equipo.disponibilidad === 'en mantenimiento';
 
                                                                 return (
                                                                     <div
@@ -289,21 +409,19 @@ export const AgregarEquipos = forwardRef(({ onSave, initialSelected = [], initia
                                                                                 type="checkbox"
                                                                                 className="checkbox checkbox-primary"
                                                                                 checked={estaSeleccionado}
-                                                                                onChange={() => handleToggle(equipo._id, equipo.disponibilidad, equipo)}
+                                                                                onChange={() => handleToggle(equipo._id, equipo)}
                                                                                 disabled={deshabilitado}
                                                                             />
                                                                             <div className="flex-1">
                                                                                 <div className="font-medium">{equipo.name || equipo.nombre || "Equipo sin nombre"}</div>
                                                                                 <div className={`text-xs ${bloqueadoPorOtraAula ? 'text-orange-600' : estaDisponible ? 'text-green-600' : 'text-red-600'}`}>
                                                                                     {bloqueadoPorOtraAula ? 'Bloqueado (otra aula seleccionada)' :
-                                                                                        equipo.disponibilidad === 'disponible' ? 'Disponible' :
-                                                                                        equipo.disponibilidad === 'ocupado' ? 'Ocupado' :
-                                                                                            equipo.disponibilidad === 'en mantenimiento' ? 'En mantenimiento' :
-                                                                                                'No disponible'}
+                                                                                        enMantenimiento ? 'En mantenimiento' :
+                                                                                        estaDisponible ? `Disponible (${cantidadDisponible}/${cantidadTotal})` :
+                                                                                        `Ocupado para este horario (0/${cantidadTotal})`}
                                                                                 </div>
                                                                             </div>
                                                                             {estaSeleccionado && (() => {
-                                                                            const cantidadMaxima = getCantidadMaxima(equipo);
                                                                             const cantidadActual = equipoSeleccionado.cantidad;
                                                                             return (
                                                                                 <div className="flex flex-col items-end gap-1">
@@ -326,16 +444,16 @@ export const AgregarEquipos = forwardRef(({ onSave, initialSelected = [], initia
                                                                                             type="button"
                                                                                             onClick={(e) => {
                                                                                                 e.stopPropagation();
-                                                                                                handleIncrementCantidad(equipo._id, cantidadMaxima);
+                                                                                                handleIncrementCantidad(equipo._id, cantidadDisponible);
                                                                                             }}
-                                                                                            disabled={cantidadActual >= cantidadMaxima}
-                                                                                            className={`btn btn-sm btn-circle ${cantidadActual >= cantidadMaxima ? 'btn-disabled bg-gray-200' : 'bg-primario hover:bg-red-700 text-white'}`}
+                                                                                            disabled={cantidadActual >= cantidadDisponible}
+                                                                                            className={`btn btn-sm btn-circle ${cantidadActual >= cantidadDisponible ? 'btn-disabled bg-gray-200' : 'bg-primario hover:bg-red-700 text-white'}`}
                                                                                         >
                                                                                             <FaPlus className="w-3 h-3" />
                                                                                         </button>
                                                                                     </div>
                                                                                     <span className="text-xs text-gray-500">
-                                                                                        Máx: {cantidadMaxima}
+                                                                                        Disponible: {cantidadDisponible}
                                                                                     </span>
                                                                                 </div>
                                                                             );
@@ -357,11 +475,14 @@ export const AgregarEquipos = forwardRef(({ onSave, initialSelected = [], initia
                                                     </h4>
                                                     <div className="grid grid-cols-1 gap-3">
                                                         {filtrarEquipos(equiposSinAula).map((equipo) => {
-                                                            const estaDisponible = equipo.disponibilidad === 'disponible';
+                                                            const estaDisponible = estaDisponibleParaHorario(equipo);
+                                                            const cantidadDisponible = getCantidadDisponible(equipo);
+                                                            const cantidadTotal = getCantidadTotal(equipo);
                                                             const equipoSeleccionado = selectedEquipos.find(item => item.equipo === equipo._id);
                                                             const estaSeleccionado = !!equipoSeleccionado;
                                                             const bloqueadoPorOtraAula = estaEnOtraAula(equipo);
                                                             const deshabilitado = !estaDisponible || bloqueadoPorOtraAula;
+                                                            const enMantenimiento = equipo.disponibilidad === 'en mantenimiento';
 
                                                             return (
                                                                 <div
@@ -376,21 +497,19 @@ export const AgregarEquipos = forwardRef(({ onSave, initialSelected = [], initia
                                                                             type="checkbox"
                                                                             className="checkbox checkbox-primary"
                                                                             checked={estaSeleccionado}
-                                                                            onChange={() => handleToggle(equipo._id, equipo.disponibilidad, equipo)}
+                                                                            onChange={() => handleToggle(equipo._id, equipo)}
                                                                             disabled={deshabilitado}
                                                                         />
                                                                         <div className="flex-1">
                                                                             <div className="font-medium">{equipo.name || equipo.nombre || "Equipo sin nombre"}</div>
                                                                             <div className={`text-xs ${bloqueadoPorOtraAula ? 'text-orange-600' : estaDisponible ? 'text-green-600' : 'text-red-600'}`}>
                                                                                 {bloqueadoPorOtraAula ? 'Bloqueado (otra aula seleccionada)' :
-                                                                                    equipo.disponibilidad === 'disponible' ? 'Disponible' :
-                                                                                    equipo.disponibilidad === 'ocupado' ? 'Ocupado' :
-                                                                                        equipo.disponibilidad === 'en mantenimiento' ? 'En mantenimiento' :
-                                                                                            'No disponible'}
+                                                                                    enMantenimiento ? 'En mantenimiento' :
+                                                                                    estaDisponible ? `Disponible (${cantidadDisponible}/${cantidadTotal})` :
+                                                                                    `Ocupado para este horario (0/${cantidadTotal})`}
                                                                             </div>
                                                                         </div>
                                                                         {estaSeleccionado && (() => {
-                                                                            const cantidadMaxima = getCantidadMaxima(equipo);
                                                                             const cantidadActual = equipoSeleccionado.cantidad;
                                                                             return (
                                                                                 <div className="flex flex-col items-end gap-1">
@@ -413,16 +532,16 @@ export const AgregarEquipos = forwardRef(({ onSave, initialSelected = [], initia
                                                                                             type="button"
                                                                                             onClick={(e) => {
                                                                                                 e.stopPropagation();
-                                                                                                handleIncrementCantidad(equipo._id, cantidadMaxima);
+                                                                                                handleIncrementCantidad(equipo._id, cantidadDisponible);
                                                                                             }}
-                                                                                            disabled={cantidadActual >= cantidadMaxima}
-                                                                                            className={`btn btn-sm btn-circle ${cantidadActual >= cantidadMaxima ? 'btn-disabled bg-gray-200' : 'bg-primario hover:bg-red-700 text-white'}`}
+                                                                                            disabled={cantidadActual >= cantidadDisponible}
+                                                                                            className={`btn btn-sm btn-circle ${cantidadActual >= cantidadDisponible ? 'btn-disabled bg-gray-200' : 'bg-primario hover:bg-red-700 text-white'}`}
                                                                                         >
                                                                                             <FaPlus className="w-3 h-3" />
                                                                                         </button>
                                                                                     </div>
                                                                                     <span className="text-xs text-gray-500">
-                                                                                        Máx: {cantidadMaxima}
+                                                                                        Disponible: {cantidadDisponible}
                                                                                     </span>
                                                                                 </div>
                                                                             );

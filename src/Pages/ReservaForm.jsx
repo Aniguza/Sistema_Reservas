@@ -53,13 +53,13 @@ export const ReservaForm = () => {
   const propositoDropdownRef = useRef(null);
   const [duracionReserva, setDuracionReserva] = useState('1'); // Duración en horas (1, 2, 3, 4)
 
-  // Generar opciones de hora cada 15 minutos (de 7:00 a 21:00)
+  // Generar opciones de hora cada 30 minutos (de 9:00 a 20:00)
   const opcionesHoraInicio = useMemo(() => {
     const opciones = [];
-    for (let hora = 9; hora <= 21; hora++) {
-      for (let minuto = 0; minuto < 60; minuto += 15) {
-        // No agregar horas después de las 21:00 que no permitan al menos 1 hora de reserva
-        if (hora === 21 && minuto > 0) continue;
+    for (let hora = 9; hora <= 20; hora++) {
+      for (let minuto = 0; minuto < 60; minuto += 30) {
+        // No agregar horas después de las 20:00 que no permitan al menos 1 hora de reserva
+        if (hora === 20 && minuto > 0) continue;
         const horaStr = hora.toString().padStart(2, '0');
         const minutoStr = minuto.toString().padStart(2, '0');
         const valor = `${horaStr}:${minutoStr}`;
@@ -70,20 +70,52 @@ export const ReservaForm = () => {
     return opciones;
   }, []);
 
+  // Hora límite de fin (21:00 = 9pm)
+  const HORA_LIMITE_FIN = 21;
+
+  // Función para calcular horas completas disponibles considerando minutos
+  const calcularHorasDisponibles = (horaInicioStr) => {
+    if (!horaInicioStr) return 4;
+    const [hora, minutos] = horaInicioStr.split(':').map(Number);
+    // Calcular minutos disponibles hasta las 21:00
+    const minutosDisponibles = (HORA_LIMITE_FIN * 60) - (hora * 60 + minutos);
+    // Convertir a horas completas (redondeando hacia abajo)
+    const horasCompletas = Math.floor(minutosDisponibles / 60);
+    return Math.min(Math.max(horasCompletas, 1), 4);
+  };
+
+  // Calcular opciones de duración disponibles según la hora de inicio
+  const opcionesDuracion = useMemo(() => {
+    const maxDuracion = calcularHorasDisponibles(formData.horaInicio);
+    return Array.from({ length: maxDuracion }, (_, i) => i + 1);
+  }, [formData.horaInicio]);
+
   // Calcular hora fin basada en hora inicio + duración
   const calcularHoraFin = (horaInicio, duracion) => {
     if (!horaInicio) return '';
     const [horas, minutos] = horaInicio.split(':').map(Number);
     const nuevaHora = horas + parseInt(duracion);
-    // Limitar a máximo 22:00
-    if (nuevaHora > 22) return '22:00';
+    // Verificar si excede el límite de las 21:00
+    if (nuevaHora > HORA_LIMITE_FIN || (nuevaHora === HORA_LIMITE_FIN && minutos > 0)) {
+      return `${HORA_LIMITE_FIN}:00`;
+    }
     return `${nuevaHora.toString().padStart(2, '0')}:${minutos.toString().padStart(2, '0')}`;
   };
 
   // Actualizar hora fin cuando cambia hora inicio o duración
   const handleHoraInicioChange = (e) => {
     const nuevaHoraInicio = e.target.value;
-    const horaFin = calcularHoraFin(nuevaHoraInicio, duracionReserva);
+    
+    // Calcular las horas disponibles para esta hora de inicio (considerando minutos)
+    const maxDuracion = calcularHorasDisponibles(nuevaHoraInicio);
+    
+    // Ajustar la duración si excede el máximo disponible
+    const duracionAjustada = parseInt(duracionReserva) > maxDuracion ? maxDuracion.toString() : duracionReserva;
+    if (duracionAjustada !== duracionReserva) {
+      setDuracionReserva(duracionAjustada);
+    }
+    
+    const horaFin = calcularHoraFin(nuevaHoraInicio, duracionAjustada);
     setFormData(prev => ({ 
       ...prev, 
       horaInicio: nuevaHoraInicio,
@@ -220,7 +252,7 @@ export const ReservaForm = () => {
   
 
   const handleCorreoChange = (e) => {
-    const valor = e.target.value;
+    const valor = e.target.value.toLowerCase(); // Convertir a minúsculas
 
     // Registrar tiempo de inicio en la primera interacción
     if (!tiempoInicio && valor.length > 0) {
@@ -957,10 +989,11 @@ export const ReservaForm = () => {
                       className="select bg-blanco border-negro w-full"
                       required
                     >
-                      <option value="1">1 hora</option>
-                      <option value="2">2 horas</option>
-                      <option value="3">3 horas</option>
-                      <option value="4">4 horas</option>
+                      {opcionesDuracion.map((horas) => (
+                        <option key={horas} value={horas.toString()}>
+                          {horas} hora{horas > 1 ? 's' : ''}
+                        </option>
+                      ))}
                     </select>
                   </fieldset>
                   <fieldset className="fieldset flex-1">
@@ -972,9 +1005,6 @@ export const ReservaForm = () => {
                       disabled
                       placeholder="Se calcula automáticamente"
                     />
-                    {formData.horaFin && (
-                      <div className="text-xs text-gray-500 mt-1">({formData.horaFin})</div>
-                    )}
                   </fieldset>
                 </div>
                 <fieldset className="fieldset w-full">
@@ -1030,7 +1060,15 @@ export const ReservaForm = () => {
 
         {/* Modal de códigos */}
         <AgregarCompañeros ref={AgregarCompañerosRef} onSave={handleSaveCompaneros} initialCodes={companeros} />
-        <AgregarEquipos ref={AgregarEquiposRef} onSave={handleSaveEquipos} initialSelected={equipos} initialSelectedAula={aulaSeleccionada} />
+        <AgregarEquipos 
+          ref={AgregarEquiposRef} 
+          onSave={handleSaveEquipos} 
+          initialSelected={equipos} 
+          initialSelectedAula={aulaSeleccionada}
+          fechaReserva={formData.fecha}
+          horaInicio={formData.horaInicio}
+          horaFin={formData.horaFin}
+        />
         <AceptarReserva ref={AceptarReservaRef} onConfirm={handleConfirmReserva} onTimeRegister={registrarTiempoFinal} />
       </section>
 
