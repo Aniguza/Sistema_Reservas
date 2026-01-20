@@ -77,7 +77,7 @@ export const Register = () => {
         navigate('/login');
       }, 1200);
     } catch (error) {
-      showError(error.message || 'No se pudo completar el registro', 4000);
+      showError(error.message || error || 'No se pudo completar el registro', 4000);
     } finally {
       setIsSubmitting(false);
     }

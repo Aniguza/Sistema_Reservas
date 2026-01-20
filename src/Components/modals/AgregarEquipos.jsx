@@ -279,7 +279,7 @@ export const AgregarEquipos = forwardRef(({ onSave, initialSelected = [], initia
                     <button className="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button>
                 </form>
                 <p className="text-sm text-gray-600 mb-4">
-                    Selecciona <strong>equipos</strong> o un <strong>aula</strong> (no ambos).
+                    Si reservas uno o varios equipos, se reservará el aula con esos equipos automáticamente. Si reservas solo un aula, no podrás usar equipos de esa aula, solo en la que 
                 </p>
                 
                 {/* Aviso si no hay fecha/hora seleccionada */}
@@ -589,18 +589,8 @@ export const AgregarEquipos = forwardRef(({ onSave, initialSelected = [], initia
                                                             <div className="flex-1">
                                                                 <div className="font-medium">{aula.name}</div>
                                                                 <div className="text-xs text-gray-500">
-                                                                    Código: {aula.codigo || 'N/A'}
+                                                                    {aula.codigo || 'N/A'}
                                                                 </div>
-                                                                {aula.capacidad && (
-                                                                    <div className="text-xs text-gray-500">
-                                                                        Capacidad: {aula.capacidad} personas
-                                                                    </div>
-                                                                )}
-                                                                {cantidadEquipos > 0 && (
-                                                                    <div className="text-xs text-blue-600">
-                                                                        {cantidadEquipos} equipo(s) asignado(s)
-                                                                    </div>
-                                                                )}
                                                             </div>
                                                         </div>
                                                     </div>
